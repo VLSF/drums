@@ -36,7 +36,8 @@ Python >= 3.9 and the following packages (installed automatically):
     └── drums/
         └── data/
             ├── spectrum.py       # FEM solver: drum shape -> Laplacian eigenvalues
-            └── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
+            ├── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
+            └── discretization.md # how the finite-element discretization works
 ```
 
 `get_drum_spectrum(drum_perimeter, N_eig, a)` meshes the polygon given by its
