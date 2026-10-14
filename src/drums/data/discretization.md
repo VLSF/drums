@@ -126,7 +126,7 @@ The smallest `N_eig` eigenvalues of $K\_f u = \lambda M\_f u$ are computed with 
 The function returns
 
 - `lam1`: the eigenvalues $\lambda\_k$,
-- `phi`: an array of shape $(N, \texttt{N\_eig})$ with the eigenfunctions at all nodes, zero at the boundary nodes (the eigenvectors are normalized so that $u^{\top} M\_f u = 1$),
+- `phi`: an array of shape $(N, k)$, where $k$ is `N_eig`, with the eigenfunctions at all nodes, zero at the boundary nodes (the eigenvectors are normalized so that $u^{\top} M\_f u = 1$),
 - `X`, `T`: the nodes and the triangles of the mesh.
 
 ## 7. Accuracy
