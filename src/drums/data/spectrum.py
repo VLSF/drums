@@ -52,7 +52,7 @@ if __name__ == "__main__":
     ok = True
     for name, p, q in [("unit square", 1.0, 1.0), ("2x1 rectangle", 2.0, 1.0)]:
         perimeter = np.array([[0, 0], [p, 0], [p, q], [0, q]], dtype=float)
-        lam, _, _, _ = get_drum_spectrum(perimeter, N_eig=n_eig, a=1e-4)
+        lam, _, _, _ = get_drum_spectrum(perimeter, N_eig=n_eig, a=3e-4)
         lam = np.sort(lam)
         exact = np.sort([np.pi**2 * (m**2/p**2 + n**2/q**2)
                          for m in range(1, 20) for n in range(1, 20)])[:n_eig]

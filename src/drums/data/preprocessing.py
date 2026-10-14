@@ -70,12 +70,12 @@ if __name__ == "__main__":
 
     # --- spectrum invariance ---
     n_eig = 8
-    lam0 = np.sort(get_drum_spectrum(P, N_eig=n_eig, a=1e-4)[0])
+    lam0 = np.sort(get_drum_spectrum(P, N_eig=n_eig, a=3e-3)[0])
     cases = {"aligned": A, "shifted+rotated": P @ R.T + [5.0, -2.0]}
     for i, Q in enumerate(augment(P)):
         cases[f"augmented {i}"] = Q
     for name, Q in cases.items():
-        lam = np.sort(get_drum_spectrum(Q, N_eig=n_eig, a=1e-4)[0])
+        lam = np.sort(get_drum_spectrum(Q, N_eig=n_eig, a=3e-3)[0])
         close = np.allclose(lam, lam0, rtol=1e-2)
         ok &= bool(close)
         if name in ("aligned", "shifted+rotated", "augmented 0", "augmented 3"):
