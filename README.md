@@ -8,7 +8,7 @@ Clone the repository and install it from the clone in editable mode, so that
 changes to the source are picked up without reinstalling:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/VLSF/drums.git
 cd drums
 pip install -e .
 ```
