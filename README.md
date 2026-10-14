@@ -35,12 +35,19 @@ Python >= 3.9 and the following packages (installed automatically):
 └── src/
     └── drums/
         └── data/
-            └── spectrum.py   # FEM solver: drum shape -> Laplacian eigenvalues
+            ├── spectrum.py       # FEM solver: drum shape -> Laplacian eigenvalues
+            └── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
 ```
 
 `get_drum_spectrum(drum_perimeter, N_eig, a)` meshes the polygon given by its
 vertices, assembles the P1 finite-element stiffness and mass matrices, and returns
 the lowest Dirichlet eigenvalues and eigenfunctions together with the mesh.
 
+`align` shifts and rotates a drum so that the mean vertex is at the origin and the
+first longest vertex points up; `augment` returns all cyclic permutations of the
+vertex sequence and of its reverse.
+
 Running `python src/drums/data/spectrum.py` checks the solver against the exact
-spectra of a unit square and a 2x1 rectangle.
+spectra of a unit square and a 2x1 rectangle. Running
+`python src/drums/data/preprocessing.py` tests `align` and `augment` and checks that
+the spectrum is unchanged by shifts, rotations and cyclic reorderings.
