@@ -37,7 +37,9 @@ Python >= 3.9 and the following packages (installed automatically):
 ├── training/
 │   └── regression/
 │       ├── align_loss.py       # example training run, loss with aligned and augmented targets
-│       └── procrustes_loss.py  # example training run, Procrustes loss
+│       ├── procrustes_loss.py  # example training run, Procrustes loss
+│       ├── procrustes_all_orderings.py  # Procrustes loss over all vertex orderings, best schedule
+│       └── triangle_dataset_experiments.md  # report on the triangle dataset experiments
 └── src/
     └── drums/
         ├── data/
@@ -79,3 +81,5 @@ The scripts in `training/regression/` are examples of training the transformer o
 triangle drums dataset (see `drums.data.datasets_collection`), e.g.
 `python training/regression/align_loss.py --data triangle_drums.npz --out results`.
 They additionally need `matplotlib`.
+The results of the experiments, including the comparison of the losses, are in
+`training/regression/triangle_dataset_experiments.md`.
