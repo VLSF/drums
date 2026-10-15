@@ -57,5 +57,6 @@ the spectrum is unchanged by shifts, rotations and cyclic reorderings.
 `generate_triangle_drums(n_samples, seed, N_eig, ...)` returns a dictionary with the
 vertices (`perimeters`) and the lowest `N_eig` Dirichlet eigenvalues (`spectra`) of random
 triangles whose angles are all at least 30 degrees. The mesh is scaled with the area of each
-triangle. Running `python src/drums/data/triangle_drums.py` tests the generator and the
+triangle. With `return_all=True` the dictionary also holds, as lists with one entry per drum, the
+`eigenfunctions`, `triangulations` and `coordinates` of the meshes. Running `python src/drums/data/triangle_drums.py` tests the generator and the
 solver on a right isosceles triangle with known spectrum.

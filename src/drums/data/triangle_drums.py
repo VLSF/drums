@@ -1,9 +1,10 @@
 import numpy as np
+import scipy.sparse as sp
 
 try:
-    from drums.data.spectrum import get_drum_spectrum
+    from drums.data.spectrum import get_drum_spectrum, local_matrices
 except ImportError:  # run as a script from the data folder
-    from spectrum import get_drum_spectrum
+    from spectrum import get_drum_spectrum, local_matrices
 
 
 def triangle_area(triangle):
@@ -29,7 +30,7 @@ def random_triangle(rng, r_min=0.5, r_max=3.0, angle_min=np.pi/6):
 
 
 def generate_triangle_drums(n_samples, seed=0, N_eig=30, n_elements=4000,
-                            r_min=0.5, r_max=3.0, angle_min=np.pi/6):
+                            r_min=0.5, r_max=3.0, angle_min=np.pi/6, return_all=False):
     """Dataset of triangular drums.
 
     The maximal element area of the mesh is area / n_elements for each triangle,
@@ -38,16 +39,30 @@ def generate_triangle_drums(n_samples, seed=0, N_eig=30, n_elements=4000,
     Returns a dict with
         'perimeters': (n_samples, 3, 2) vertices of the triangles,
         'spectra':    (n_samples, N_eig) smallest Dirichlet eigenvalues, ascending.
+    If return_all is True, the dictionary also contains lists (one entry per drum,
+    the meshes differ in size) with everything get_drum_spectrum produces:
+        'eigenfunctions': (N, N_eig) values at the mesh nodes, columns ordered as the spectrum,
+        'triangulations': (N_triangles, 3) node indices of the triangles,
+        'coordinates':    (N, 2) mesh nodes.
     """
     rng = np.random.default_rng(seed)
     perimeters, spectra = [], []
+    extra = dict(eigenfunctions=[], triangulations=[], coordinates=[])
     for _ in range(n_samples):
         triangle = random_triangle(rng, r_min, r_max, angle_min)
         a = triangle_area(triangle) / n_elements
-        lam, _, X, _ = get_drum_spectrum(triangle, N_eig=N_eig, a=a)
+        lam, phi, X, T = get_drum_spectrum(triangle, N_eig=N_eig, a=a)
+        order = np.argsort(lam)
         perimeters.append(triangle)
-        spectra.append(np.sort(lam))
-    return dict(perimeters=np.stack(perimeters), spectra=np.stack(spectra))
+        spectra.append(lam[order])
+        if return_all:  # only keep the mesh data if it is returned
+            extra["eigenfunctions"].append(phi[:, order])
+            extra["triangulations"].append(T)
+            extra["coordinates"].append(X)
+    data = dict(perimeters=np.stack(perimeters), spectra=np.stack(spectra))
+    if return_all:
+        data.update(extra)
+    return data
 
 
 def min_angle(triangle):
@@ -87,6 +102,29 @@ if __name__ == "__main__":
         "circumradius in [0.5, 3]": np.all((np.linalg.norm(P, axis=2) >= 0.5 - 1e-9) & (np.linalg.norm(P, axis=2) <= 3 + 1e-9)),
         "reproducible": np.allclose(generate_triangle_drums(2, seed=0, N_eig=N_eig)["spectra"], S[:2]),
     }
+    check_default = set(data) == {"perimeters", "spectra"}
+    print(f"default keys are perimeters and spectra: {check_default}")
+    ok &= check_default
+
+    # --- return_all: same spectra, consistent extra data, Rayleigh quotients match eigenvalues
+    full = generate_triangle_drums(2, seed=0, N_eig=N_eig, return_all=True)
+    keys = set(full) == {"perimeters", "spectra", "eigenfunctions", "triangulations", "coordinates"}
+    same = np.allclose(full["spectra"], S[:2]) and np.allclose(full["perimeters"], P[:2])
+    phi, X, T = full["eigenfunctions"][0], full["coordinates"][0], full["triangulations"][0]
+    sizes = len(full["eigenfunctions"]) == len(full["triangulations"]) == len(full["coordinates"]) == 2 \
+        and phi.shape == (len(X), N_eig) and T.shape[1] == 3
+    # eigenfunction k must satisfy K phi = lambda M phi: check via Rayleigh quotient on the mesh
+    Ke_Me = [local_matrices(X[t]) for t in T]
+    rows = np.repeat(T[:, :, None], 3, axis=2).ravel(); cols = np.repeat(T[:, None, :], 3, axis=1).ravel()
+    K = sp.coo_matrix((np.array([np.asarray(k) for k, _ in Ke_Me]).ravel(), (rows, cols)), shape=(len(X),) * 2).tocsr()
+    M = sp.coo_matrix((np.array([np.asarray(m) for _, m in Ke_Me]).ravel(), (rows, cols)), shape=(len(X),) * 2).tocsr()
+    rq = np.array([phi[:, k] @ (K @ phi[:, k]) / (phi[:, k] @ (M @ phi[:, k])) for k in range(N_eig)])
+    rayleigh = np.allclose(rq, full["spectra"][0], rtol=1e-6)
+    for name, c in [("return_all keys", keys), ("return_all spectra unchanged", same),
+                    ("return_all sizes", sizes), ("eigenfunction order matches spectrum", rayleigh)]:
+        print(f"{name}: {bool(c)}")
+        ok &= bool(c)
+
     for name, c in checks.items():
         print(f"{name}: {bool(c)}")
         ok &= bool(c)
