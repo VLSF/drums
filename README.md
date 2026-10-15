@@ -25,6 +25,8 @@ Python >= 3.9 and the following packages (installed automatically):
 - `scipy`
 - `jax`
 - `triangle` (Python wrapper for the Triangle mesh generator)
+- `equinox` (neural networks in JAX)
+- `optax` (optimisers, used in the model tests)
 
 ## Project structure
 
@@ -34,11 +36,13 @@ Python >= 3.9 and the following packages (installed automatically):
 ├── README.md
 └── src/
     └── drums/
-        └── data/
-            ├── spectrum.py       # FEM solver: drum shape -> Laplacian eigenvalues
-            ├── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
-            ├── discretization.md # how the finite-element discretization works
-            └── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
+        ├── data/
+        │   ├── spectrum.py       # FEM solver: drum shape -> Laplacian eigenvalues
+        │   ├── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
+        │   ├── discretization.md # how the finite-element discretization works
+        │   └── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
+        └── models/
+            └── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
 ```
 
 `get_drum_spectrum(drum_perimeter, N_eig, a)` meshes the polygon given by its
@@ -60,3 +64,9 @@ triangles whose angles are all at least 30 degrees. The mesh is scaled with the 
 triangle. With `return_all=True` the dictionary also holds, as lists with one entry per drum, the
 `eigenfunctions`, `triangulations` and `coordinates` of the meshes. Running `python src/drums/data/triangle_drums.py` tests the generator and the
 solver on a right isosceles triangle with known spectrum.
+
+`drums.models.transformer.DrumTransformer(N_v, N_f, N_eig, key, L, n_heads=4, mlp_ratio=4)`
+maps the (normalised) eigenvalues of one drum to its `N_v` vertices. The spectrum is
+projected to one token, joined with `N_v` learnable vertex tokens, and processed by `L`
+pre-norm transformer blocks; a linear decoder turns the vertex tokens into coordinates.
+Use `jax.vmap` for batches. `python src/drums/models/transformer.py` runs its tests.

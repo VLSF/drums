@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Tutorial on inverse problems: restoring the shape of a 2D drum from its spectrum"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["numpy", "scipy", "jax", "triangle"]
+dependencies = ["numpy", "scipy", "jax", "triangle", "equinox", "optax"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
