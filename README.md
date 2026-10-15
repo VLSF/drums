@@ -34,6 +34,10 @@ Python >= 3.9 and the following packages (installed automatically):
 .
 ├── pyproject.toml            # package metadata and dependencies
 ├── README.md
+├── training/
+│   └── regression/
+│       ├── align_loss.py       # example training run, loss with aligned and augmented targets
+│       └── procrustes_loss.py  # example training run, Procrustes loss
 └── src/
     └── drums/
         ├── data/
@@ -70,3 +74,8 @@ maps the (normalised) eigenvalues of one drum to its `N_v` vertices. The spectru
 projected to one token, joined with `N_v` learnable vertex tokens, and processed by `L`
 pre-norm transformer blocks; a linear decoder turns the vertex tokens into coordinates.
 Use `jax.vmap` for batches. `python src/drums/models/transformer.py` runs its tests.
+
+The scripts in `training/regression/` are examples of training the transformer on the
+triangle drums dataset (see `drums.data.datasets_collection`), e.g.
+`python training/regression/align_loss.py --data triangle_drums.npz --out results`.
+They additionally need `matplotlib`.
