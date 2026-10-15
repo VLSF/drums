@@ -19,7 +19,7 @@ def get_drum_spectrum(drum_perimeter, N_eig=30, a=0.001):
     S = np.array([(i, (i+1) % l) for i in range(l)])
     domain = dict(vertices=drum_perimeter, segments=S)
 
-    mesh = tr.triangulate(domain, f'pq30a{a}')
+    mesh = tr.triangulate(domain, f'pq30a{a:.12f}')   # Triangle does not parse exponents, e.g. 1e-05
     X = mesh['vertices']                 # (N, 2)
     T = mesh['triangles']                # (Ne, 3), CCW
     N = len(X)
@@ -59,4 +59,12 @@ if __name__ == "__main__":
         close = np.allclose(lam, exact, rtol=1e-2)
         ok &= close
         print(f"{name}\n  computed: {lam}\n  expected: {exact}\n  allclose (rtol=1e-2): {close}")
+
+    # small max area: formatted in exponent notation by str(), which Triangle misreads
+    sq = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=float)
+    lam, _, X, _ = get_drum_spectrum(sq, N_eig=5, a=5e-5)
+    exact = np.pi**2 * np.array([2, 5, 5, 8, 10])
+    close = np.allclose(np.sort(lam), exact, rtol=1e-2)
+    ok &= close
+    print(f"small a=5e-5: {len(X)} nodes, allclose: {close}")
     assert ok, "spectrum test failed"
