@@ -23,7 +23,8 @@ raw spectrum unless stated otherwise. One run takes about one minute on the GPU.
 **Errors.** For a predicted drum $p$ and the true one $t$, after centring both, the prediction is
 rotated (or reflected) onto the target by the optimal orthogonal map (orthogonal Procrustes).
 The error is the mean over vertices of $\lVert t\_i - p\_i \rVert / \lVert t\_i \rVert$. The errors differ in the vertex
-orderings that are allowed, since the ordering of the vertices is not determined by the spectrum:
+orderings that are allowed, since the ordering of the vertices is not determined by the spectrum.
+A model is trained with one of these errors as its loss, but it can be scored with any of them:
 
 - **all-orderings error**: the smallest error over all $2 N\_v = 6$ orderings (3 cyclic shifts of
   the order and of its reverse). This is the error that corresponds to the actual problem, and it
@@ -53,7 +54,9 @@ Each setting was run with two seeds (17 and 18).
 The run with seed 17, constant Adam and raw features reproduces the notebook exactly: align loss
 train/test 0.1604 / 0.1534, Procrustes (two orderings) train/test 0.1726 / 0.1965.
 
-### Align loss (align error)
+### Trained with the align loss
+
+The models are scored with the align error, which is also the loss they were trained on.
 
 | Features | Optimiser | Train (seed 17 / 18) | Test (seed 17 / 18) | Test mean |
 |---|---|---|---|---|
@@ -62,7 +65,16 @@ train/test 0.1604 / 0.1534, Procrustes (two orderings) train/test 0.1726 / 0.196
 | log + standardise | constant Adam | 0.1461 / 0.1550 | 0.1598 / 0.1605 | 0.1602 |
 | log + standardise | warm-up + cosine, AdamW, clip | 0.1299 / 0.1317 | 0.1493 / 0.1601 | 0.1547 |
 
-### Procrustes loss, two orderings (all-orderings error)
+### Trained with the Procrustes loss on two orderings
+
+The two tables below show the **same trained models**: four settings (features and optimiser),
+two seeds each, all trained with the two-orderings Procrustes loss. They are not different runs
+and they do not differ in any training parameter. The tables differ only in the error measure
+used to score the models after training.
+
+**Evaluated with the all-orderings error.** The best match over all 6 orderings is used,
+including the cyclic shifts. This measures how good the predicted shape is regardless of how
+the vertices are labelled.
 
 | Features | Optimiser | Train (seed 17 / 18) | Test (seed 17 / 18) | Test mean |
 |---|---|---|---|---|
@@ -71,7 +83,9 @@ train/test 0.1604 / 0.1534, Procrustes (two orderings) train/test 0.1726 / 0.196
 | log + standardise | constant Adam | 0.0709 / 0.0518 | 0.0677 / 0.0513 | 0.0595 |
 | log + standardise | warm-up + cosine, AdamW, clip | 0.0432 / 0.0357 | 0.0431 / 0.0386 | 0.0409 |
 
-The same runs in the two-orderings error, which is what they were trained on:
+**Evaluated with the two-orderings error.** Only the given and the reversed order are used,
+which is what these models were trained on. The seed 17 values of the first setting (raw features,
+constant Adam) are the numbers of the original notebook.
 
 | Features | Optimiser | Train (seed 17 / 18) | Test (seed 17 / 18) | Test mean |
 |---|---|---|---|---|
@@ -80,7 +94,12 @@ The same runs in the two-orderings error, which is what they were trained on:
 | log + standardise | constant Adam | 0.1713 / 0.1713 | 0.1971 / 0.1910 | 0.1941 |
 | log + standardise | warm-up + cosine, AdamW, clip | 0.1546 / 0.1482 | 0.1842 / 0.1883 | 0.1863 |
 
-### Procrustes loss, all orderings (all-orderings error)
+### Trained with the Procrustes loss on all orderings
+
+Again the two tables show the **same trained models** (four settings, two seeds each, all trained
+with the all-orderings Procrustes loss), scored with two different error measures.
+
+**Evaluated with the all-orderings error**, which is the loss they were trained on:
 
 | Features | Optimiser | Train (seed 17 / 18) | Test (seed 17 / 18) | Test mean |
 |---|---|---|---|---|
@@ -89,8 +108,9 @@ The same runs in the two-orderings error, which is what they were trained on:
 | log + standardise | constant Adam | 0.0198 / 0.0201 | 0.0206 / 0.0224 | 0.0215 |
 | log + standardise | warm-up + cosine, AdamW, clip | 0.0054 / 0.0054 | 0.0058 / 0.0065 | 0.0061 |
 
-The same runs in the two-orderings error, where they are worse because the network is free to
-choose the vertex labelling (which the loss ignores):
+**Evaluated with the two-orderings error.** The values are much larger than in the previous table. The loss ignores
+the vertex labelling, so the network is free to choose it, and the prediction is most likely a
+cyclic shift of the target in many cases (we did not check this directly).
 
 | Features | Optimiser | Train (seed 17 / 18) | Test (seed 17 / 18) | Test mean |
 |---|---|---|---|---|
