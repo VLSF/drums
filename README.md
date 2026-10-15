@@ -37,7 +37,8 @@ Python >= 3.9 and the following packages (installed automatically):
         └── data/
             ├── spectrum.py       # FEM solver: drum shape -> Laplacian eigenvalues
             ├── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
-            └── discretization.md # how the finite-element discretization works
+            ├── discretization.md # how the finite-element discretization works
+            └── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
 ```
 
 `get_drum_spectrum(drum_perimeter, N_eig, a)` meshes the polygon given by its
@@ -52,3 +53,9 @@ Running `python src/drums/data/spectrum.py` checks the solver against the exact
 spectra of a unit square and a 2x1 rectangle. Running
 `python src/drums/data/preprocessing.py` tests `align` and `augment` and checks that
 the spectrum is unchanged by shifts, rotations and cyclic reorderings.
+
+`generate_triangle_drums(n_samples, seed, N_eig, ...)` returns a dictionary with the
+vertices (`perimeters`) and the lowest `N_eig` Dirichlet eigenvalues (`spectra`) of random
+triangles whose angles are all at least 30 degrees. The mesh is scaled with the area of each
+triangle. Running `python src/drums/data/triangle_drums.py` tests the generator and the
+solver on a right isosceles triangle with known spectrum.
