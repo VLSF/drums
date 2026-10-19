@@ -13,7 +13,7 @@ class DrumVelocity(eqx.Module):
         self.mlp = eqx.nn.MLP(
             in_size=2 * n_vertices + 1 + n_eig,
             out_size=2 * n_vertices,
-            width_size=256,
+            width_size=512,
             depth=3,
             activation=jax.nn.gelu,
             key=key
