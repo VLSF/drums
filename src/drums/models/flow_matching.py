@@ -52,7 +52,7 @@ def sample(model, spectrum, key, n_steps=100):
     return x
 
 
-def main():
+def main(seed=17):
     import numpy as np
     import optax
 
@@ -75,19 +75,22 @@ def main():
     )
     vertices = vertices / target_scale
 
-    key = jr.PRNGKey(42)
+    key = jr.PRNGKey(seed)
     key, init_key = jr.split(key)
     model = DrumVelocity(init_key)
 
-    n_updates = 20000
+    n_updates = 5000
     schedule = optax.warmup_cosine_decay_schedule(
         init_value=0.0,
         peak_value=1e-3,
-        warmup_steps=1000,
+        warmup_steps=250,
         decay_steps=n_updates,
         end_value=1e-5,
     )
-    optimizer = optax.adamw(schedule, weight_decay=1e-4)
+    optimizer = optax.chain(
+        optax.clip_by_global_norm(1.0),
+        optax.adamw(schedule, weight_decay=1e-4),
+    )
     state = optimizer.init(eqx.filter(model, eqx.is_array))
 
     @eqx.filter_jit
@@ -122,8 +125,8 @@ def main():
                 f"test={float(test_loss):.4f}"
             )
 
-    return model, history
+    return model, history, spectra, vertices
 
 
 if __name__ == "__main__":
-    model, history = main()
+    model, history, spectra, vertices = main()
