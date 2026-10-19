@@ -1,4 +1,6 @@
 .ipynb_checkpoints/
+.venv/
+*.npz
 __pycache__/
 *.egg-info/
 build/
