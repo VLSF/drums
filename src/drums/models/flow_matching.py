@@ -119,15 +119,15 @@ def main(seed=17):
 
     key = jr.PRNGKey(seed)
     key, init_key = jr.split(key)
-    model = DrumTransformerVelocity(init_key)
+    model = DrumTransformerVelocity(init_key, N_f=256)
 
-    n_updates = 5000
+    n_updates = 10000
     schedule = optax.warmup_cosine_decay_schedule(
         init_value=0.0,
         peak_value=1e-3,
-        warmup_steps=250,
+        warmup_steps=500,
         decay_steps=n_updates,
-        end_value=1e-5,
+        end_value=1e-6,
     )
     optimizer = optax.chain(
         optax.clip_by_global_norm(1.0),
