@@ -4,6 +4,7 @@ import jax.numpy as jnp
 import jax.random as jr
 
 from drums.models.transformer import Block
+from drums.data.preprocessing import canonical_triangle
 
 class DrumTransformerVelocity(eqx.Module):
     spectrum_encoder: eqx.nn.Linear
@@ -100,7 +101,7 @@ def sample(model, spectrum, key, n_steps=30):
     return x
 
 
-def main(seed=17):
+def main(seed=17, canonical=False):
     import numpy as np
     import optax
 
@@ -121,6 +122,11 @@ def main(seed=17):
     target_scale = jnp.max(
         jnp.linalg.norm(vertices[:n_train], axis=-1)
     )
+    if canonical:
+        vertices = jnp.asarray(
+            [canonical_triangle(triangle) for triangle in data["perimeters"]],
+            dtype=jnp.float32,
+        )
     vertices = vertices / target_scale
 
     key = jr.PRNGKey(seed)

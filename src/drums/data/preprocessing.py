@@ -1,6 +1,16 @@
 import numpy as np
 
 
+def canonical_triangle(vertices):
+    """Centre a triangle with its longest edge horizontal and shorter leg on the left."""
+    vertices = np.asarray(vertices, dtype=np.float64)
+    a, b, c = np.sort(np.linalg.norm(vertices - np.roll(vertices, 1, axis=0), axis=1))
+    x = (a * a + c * c - b * b) / (2 * c)
+    y = np.sqrt(max(a * a - x * x, 0.0))
+    triangle = np.array([[0.0, 0.0], [c, 0.0], [x, y]])
+    return triangle - triangle.mean(axis=0, keepdims=True)
+
+
 def align(vertices, rtol=1e-9):
     """Shift and rotate a drum: zero mean vertex, (first) longest vertex pointing up (+y)."""
     vertices_ = vertices - np.mean(vertices, axis=0, keepdims=True)
