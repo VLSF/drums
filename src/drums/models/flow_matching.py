@@ -83,13 +83,19 @@ def flow_matching_loss(model, spectra, vertices, key):
     return jnp.mean((predicted_velocity - target_velocity) ** 2)
 
 
-def sample(model, spectrum, key, n_steps=100):
+def sample(model, spectrum, key, n_steps=30):
+    """Integrate the velocity field from t=0 to t=1 using classical RK4."""
     dtype = spectrum.dtype
     x = jr.normal(key, (model.n_vertices, 2), dtype=dtype)
     dt = 1.0 / n_steps
 
     for i in range(n_steps):
-        x = x + dt * model(i * dt, x, spectrum)
+        t = i * dt
+        k1 = model(t, x, spectrum)
+        k2 = model(t + dt / 2, x + dt * k1 / 2, spectrum)
+        k3 = model(t + dt / 2, x + dt * k2 / 2, spectrum)
+        k4 = model(t + dt, x + dt * k3, spectrum)
+        x = x + dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6
 
     return x
 
@@ -121,7 +127,7 @@ def main(seed=17):
     key, init_key = jr.split(key)
     model = DrumTransformerVelocity(init_key, N_f=256)
 
-    n_updates = 10000
+    n_updates = 5000
     schedule = optax.warmup_cosine_decay_schedule(
         init_value=0.0,
         peak_value=1e-3,
