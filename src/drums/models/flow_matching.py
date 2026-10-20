@@ -3,6 +3,48 @@ import jax
 import jax.numpy as jnp
 import jax.random as jr
 
+from drums.models.transformer import Block
+
+class DrumTransformerVelocity(eqx.Module):
+    spectrum_encoder: eqx.nn.Linear
+    coordinate_encoder: eqx.nn.Linear
+    time_encoder: eqx.nn.Linear
+    vertex_tokens: jax.Array
+    blocks: list
+    final_norm: eqx.nn.LayerNorm
+    decoder: eqx.nn.Linear
+    n_vertices: int
+
+    def __init__(self, key, n_vertices=3, n_eig=30, N_f=128, L=3, n_heads=4):
+        k_spec, k_coord, k_time, k_tok, k_blocks, k_dec = jr.split(key, 6)
+
+        self.n_vertices = n_vertices
+        self.spectrum_encoder = eqx.nn.Linear(n_eig, N_f, key=k_spec)
+        self.coordinate_encoder = eqx.nn.Linear(2, N_f, key=k_coord)
+        self.time_encoder = eqx.nn.Linear(1, N_f, key=k_time)
+
+        self.vertex_tokens = jr.normal(k_tok, (n_vertices, N_f)) / jnp.sqrt(N_f)
+
+        self.blocks = [
+            Block(N_f, n_heads, mlp_ratio=4, key=k) for k in jr.split(k_blocks, L)
+        ]
+
+        self.final_norm = eqx.nn.LayerNorm(N_f)
+        self.decoder = eqx.nn.Linear(N_f, 2, key=k_dec)
+
+    def __call__(self, t, x_t, spectrum):
+        vertices = jax.vmap(self.coordinate_encoder)(x_t)
+        vertices = vertices + self.vertex_tokens + self.time_encoder(jnp.atleast_1d(t))
+
+        spectrum_token = self.spectrum_encoder(spectrum)[None]
+        tokens = jnp.concatenate([spectrum_token, vertices], axis=0)
+
+        for block in self.blocks:
+            tokens = block(tokens)
+
+        vertices = jax.vmap(self.final_norm)(tokens[1:])
+        return jax.vmap(self.decoder)(vertices)
+
 
 class DrumVelocity(eqx.Module):
     mlp: eqx.nn.MLP
@@ -42,7 +84,7 @@ def flow_matching_loss(model, spectra, vertices, key):
 
 
 def sample(model, spectrum, key, n_steps=100):
-    dtype = model.mlp.layers[0].weight.dtype
+    dtype = spectrum.dtype
     x = jr.normal(key, (model.n_vertices, 2), dtype=dtype)
     dt = 1.0 / n_steps
 
@@ -77,7 +119,7 @@ def main(seed=17):
 
     key = jr.PRNGKey(seed)
     key, init_key = jr.split(key)
-    model = DrumVelocity(init_key)
+    model = DrumTransformerVelocity(init_key)
 
     n_updates = 5000
     schedule = optax.warmup_cosine_decay_schedule(
