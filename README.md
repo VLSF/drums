@@ -48,7 +48,8 @@ Python >= 3.9 and the following packages (installed automatically):
         │   ├── discretization.md # how the finite-element discretization works
         │   └── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
         └── models/
-            └── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
+            ├── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
+            └── ring_transformer.py  # RingTransformer: invariant/equivariant transformer on closed polygons
 ```
 
 `get_drum_spectrum(drum_perimeter, N_eig, a)` meshes the polygon given by its
@@ -83,3 +84,10 @@ triangle drums dataset (see `drums.data.datasets_collection`), e.g.
 They additionally need `matplotlib`.
 The results of the experiments, including the comparison of the losses, are in
 `training/regression/triangle_dataset_experiments.md`.
+
+`drums.models.ring_transformer.RingTransformer(n, m, N_f, N_inv, key, L, n_heads=4, mlp_ratio=4)`
+takes a closed polygon `X` of `n` vertices in the plane and a context vector `c` of length `m`.
+Its forward pass `model(c, X)` returns an invariant vector (invariant to rotations, reflections,
+translations and cyclic shifts of the vertices) and `n` corrections that are equivariant to the
+same transformations. `model.forward_flip(c, X)` makes both symmetric also under reversion of
+the vertex order. `python src/drums/models/ring_transformer.py` runs the symmetry tests.
