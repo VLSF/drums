@@ -49,7 +49,8 @@ Python >= 3.9 and the following packages (installed automatically):
         │   └── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
         └── models/
             ├── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
-            └── ring_transformer.py  # RingTransformer: invariant/equivariant transformer on closed polygons
+            ├── ring_transformer.py  # RingTransformer: invariant/equivariant transformer on closed polygons
+            └── ring_transformer.md  # description of the RingTransformer architecture
 ```
 
 `get_drum_spectrum(drum_perimeter, N_eig, a)` meshes the polygon given by its
@@ -91,3 +92,4 @@ Its forward pass `model(c, X)` returns an invariant vector (invariant to rotatio
 translations and cyclic shifts of the vertices) and `n` corrections that are equivariant to the
 same transformations. `model.forward_flip(c, X)` makes both symmetric also under reversion of
 the vertex order. `python src/drums/models/ring_transformer.py` runs the symmetry tests.
+The architecture is described in `src/drums/models/ring_transformer.md`.
