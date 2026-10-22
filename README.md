@@ -35,6 +35,10 @@ Python >= 3.9 and the following packages (installed automatically):
 ├── pyproject.toml            # package metadata and dependencies
 ├── README.md
 ├── training/
+│   ├── classification/
+│   │   ├── ring_transformer_classifier.py      # classify (drum, spectrum) pairs with the RingTransformer
+│   │   ├── invariant_features_classifier.py    # the same with invariant distances to learned drums
+│   │   └── triangle_dataset_experiments.md     # comparison of the two classifiers
 │   └── regression/
 │       ├── align_loss.py       # example training run, loss with aligned and augmented targets
 │       ├── procrustes_loss.py  # example training run, Procrustes loss
@@ -94,3 +98,10 @@ translations and cyclic shifts of the vertices) and `n` corrections that are equ
 same transformations. `model.forward_flip(c, X)` makes both symmetric also under reversion of
 the vertex order. `python src/drums/models/ring_transformer.py` runs the symmetry tests.
 The architecture is described in `src/drums/models/ring_transformer.md`.
+
+`training/classification/` contains two examples that classify pairs (drum shape, spectrum) as
+matching or non-matching, with the ring transformer and with invariant features of the drum.
+They are run in the same way, e.g.
+`python training/classification/ring_transformer_classifier.py --data triangle_drums.npz`.
+The comparison of the two approaches is in
+`training/classification/triangle_dataset_experiments.md`.
