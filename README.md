@@ -46,7 +46,8 @@ Python >= 3.9 and the following packages (installed automatically):
         │   ├── spectrum.py       # FEM solver: drum shape -> Laplacian eigenvalues
         │   ├── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
         │   ├── discretization.md # how the finite-element discretization works
-        │   └── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
+        │   ├── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
+        │   └── datasets_collection.py  # script that collects the named datasets and saves them
         └── models/
             ├── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
             ├── ring_transformer.py  # RingTransformer: invariant/equivariant transformer on closed polygons
