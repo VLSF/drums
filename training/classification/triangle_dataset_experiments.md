@@ -1,8 +1,9 @@
 # Classification of matching drum and spectrum pairs: triangle dataset experiments
 
-This report compares two networks that classify a pair (drum shape, spectrum) as matching or
+This report compares three approaches that classify a pair (drum shape, spectrum) as matching or
 non-matching on the triangle drums dataset. All the numbers below were produced by the scripts
-`ring_transformer_classifier.py` and `invariant_features_classifier.py` in this folder.
+`ring_transformer_classifier.py`, `invariant_features_classifier.py` and
+`predicted_drums_classifier.py` in this folder.
 
 ## Setup
 
@@ -16,7 +17,7 @@ of another random drum of the same split (label 0, non-matching), so the classes
 The other drum is drawn with a random permutation without fixed points, so that a drum is never
 paired with its own spectrum by chance. This gives 1800 training pairs and 200 test pairs.
 
-**Models.** Both models return one number $r = N\_2 - N\_1$, and the probability that the pair
+**Models.** All models return one number $r = N\_2 - N\_1$, and the probability that the pair
 matches is $p(\text{same}) = \sigma(-r)$, where $\sigma$ is the sigmoid function. The loss is the
 negative log likelihood of the labels, which is computed from $\log \sigma(\pm r)$ for numerical
 stability.
@@ -31,13 +32,23 @@ stability.
   $2 N\_v = 6$ vertex orderings, so it is invariant to all the symmetries. The 100 distances are
   concatenated with the spectrum and processed by an MLP with $L = 6$ residual blocks of width
   $N\_f = 128$.
+- **Predicted drums, end-to-end** (`predicted_drums_classifier.py`): a `DrumTransformer` predicts
+  $K$ drums at once from the spectrum (its decoder gives $2K$ numbers for every vertex). The
+  relative Procrustes distances between the given drum and the $K$ predicted drums are computed
+  (minimised over all vertex orderings, relative to the size of the given drum), and a small
+  scorer acts on their logarithms: either a linear layer, or one hidden layer with 16 units. The
+  whole model is trained once on the pair labels with the loss above. The predicted drums get no
+  direct supervision from the true drums, only the gradient of the classification loss.
+  $N\_f = 128$, $L = 5$ layers.
 
 **Training.** Batch size 64 drawn from the training pairs, AdamW with weight decay $10^{-4}$,
 warm-up for 250 steps to the learning rate $10^{-3}$, cosine decay to $10^{-5}$, gradient clipping
 at global norm 1.0, single precision. The ring transformer is trained for 5000 updates and the
 invariant features model for 3000 updates, as in the notebooks. Because the budgets differ, the
-invariant features model was also trained for 5000 updates. Each configuration was run with
-11 seeds (0 to 9 and the default seed 176 of the scripts). The seed changes the initialisation of
+invariant features model was also trained for 5000 updates. The predicted drums model is trained in the same way,
+for 5000 updates and, in one configuration, for 10000 updates. The ring transformer and the invariant
+features configurations were run with 11 seeds (0 to 9 and the default seed 176 of the scripts), and
+the predicted drums configurations with 5 seeds (0 to 4). The seed changes the initialisation of
 the model, the batches and the non-matching pairs. The split into training and test drums is
 fixed.
 
@@ -55,19 +66,36 @@ fixed.
 
 ## Results
 
-Mean ± standard deviation over 11 seeds.
+Mean ± standard deviation over the seeds.
 
-| Model | Params | Updates | Train acc. | Test acc. (200 pairs) | Acc. matching | Acc. non-matching | Balanced acc. | ROC AUC |
-|---|---|---|---|---|---|---|---|---|
-| Ring transformer | 798,436 | 5000 | 0.9883 ± 0.0024 | 0.9814 ± 0.0087 | 0.9991 ± 0.0030 | 0.9658 ± 0.0040 | 0.9824 ± 0.0029 | 0.9912 ± 0.0018 |
-| Invariant features, 3000 updates (notebook) | 809,561 | 3000 | 0.9524 ± 0.0024 | 0.9418 ± 0.0182 | 0.9855 ± 0.0052 | 0.8928 ± 0.0056 | 0.9391 ± 0.0039 | 0.9675 ± 0.0031 |
-| Invariant features, 5000 updates (matched) | 809,561 | 5000 | 0.9613 ± 0.0051 | 0.9455 ± 0.0182 | 0.9836 ± 0.0067 | 0.9118 ± 0.0107 | 0.9477 ± 0.0064 | 0.9742 ± 0.0044 |
+| Model | Seeds | Params | Updates | Train acc. | Test acc. (200 pairs) | Acc. matching | Acc. non-matching | Balanced acc. | ROC AUC |
+|---|---|---|---|---|---|---|---|---|---|
+| Ring transformer | 11 | 798,436 | 5000 | 0.9883 ± 0.0024 | 0.9814 ± 0.0087 | 0.9991 ± 0.0030 | 0.9658 ± 0.0040 | 0.9824 ± 0.0029 | 0.9912 ± 0.0018 |
+| Invariant features, 3000 updates (notebook) | 11 | 809,561 | 3000 | 0.9524 ± 0.0024 | 0.9418 ± 0.0182 | 0.9855 ± 0.0052 | 0.8928 ± 0.0056 | 0.9391 ± 0.0039 | 0.9675 ± 0.0031 |
+| Invariant features, 5000 updates (matched) | 11 | 809,561 | 5000 | 0.9613 ± 0.0051 | 0.9455 ± 0.0182 | 0.9836 ± 0.0067 | 0.9118 ± 0.0107 | 0.9477 ± 0.0064 | 0.9742 ± 0.0044 |
+| Predicted drums, K = 1, linear scorer | 5 | 996,228 | 5000 | 0.5418 ± 0.0945 | 0.5580 ± 0.1192 | 0.5040 ± 0.3914 | 0.5991 ± 0.2460 | 0.5516 ± 0.1144 | 0.6618 ± 0.1675 |
+| Predicted drums, K = 4, linear scorer | 5 | 997,005 | 5000 | 0.7553 ± 0.1791 | 0.7720 ± 0.1862 | 0.8120 ± 0.3926 | 0.6938 ± 0.2415 | 0.7529 ± 0.1783 | 0.8331 ± 0.1939 |
+| Predicted drums, K = 4, MLP scorer | 5 | 997,097 | 5000 | 0.8924 ± 0.0140 | 0.9010 ± 0.0282 | 0.9680 ± 0.0342 | 0.8007 ± 0.0412 | 0.8843 ± 0.0207 | 0.9452 ± 0.0158 |
+| Predicted drums, K = 4, MLP scorer, 10000 updates | 5 | 997,097 | 10000 | 0.9173 ± 0.0991 | 0.9300 ± 0.0880 | 1.0000 ± 0.0000 | 0.8376 ± 0.1860 | 0.9188 ± 0.0930 | 0.9579 ± 0.0635 |
 
 The ring transformer is better than the invariant features model for every seed, both in the
 balanced accuracy over all test pairs (minimum of the ring transformer 0.9757 against the maximum
 0.9562 of the invariant features model trained for 5000 updates) and in the ROC AUC (0.9880 against
 0.9814). The accuracy on the 200 test pairs of one run is the least reliable number: its standard
 deviation over seeds is 0.9% for the ring transformer and 1.8% for the invariant features model.
+
+### Predicted drums, end to end
+
+The end-to-end predicted drums model is clearly worse than the other two, and its results depend
+strongly on the seed. Balanced accuracy / ROC AUC over all test pairs for every seed:
+
+| Seed | K = 1, linear | K = 4, linear | K = 4, MLP | K = 4, MLP, 10000 updates |
+|---|---|---|---|---|
+| 0 | 0.7273 / 0.7846 | 0.4987 / 0.5002 | 0.8704 / 0.9377 | 0.7571 / 0.8451 |
+| 1 | 0.5995 / 0.8950 | 0.8396 / 0.9068 | 0.8849 / 0.9464 | 0.9958 / 0.9994 |
+| 2 | 0.4972 / 0.5570 | 0.9708 / 0.9996 | 0.8953 / 0.9624 | 0.9378 / 0.9809 |
+| 3 | 0.4358 / 0.5261 | 0.7836 / 0.8466 | 0.8591 / 0.9227 | 0.9502 / 0.9814 |
+| 4 | 0.4980 / 0.5460 | 0.6717 / 0.9124 | 0.9120 / 0.9568 | 0.9531 / 0.9827 |
 
 ### Which non-matching pairs are difficult
 
@@ -80,10 +108,15 @@ groups. The table gives the accuracy on the non-matching pairs of each group (me
 | Ring transformer | 0.8998 | 0.9979 | 0.9997 |
 | Invariant features, 3000 updates (notebook) | 0.7151 | 0.9702 | 0.9930 |
 | Invariant features, 5000 updates (matched) | 0.7582 | 0.9809 | 0.9963 |
+| Predicted drums, K = 1, linear scorer | 0.5633 | 0.3972 | 0.8368 |
+| Predicted drums, K = 4, linear scorer | 0.4307 | 0.7702 | 0.8803 |
+| Predicted drums, K = 4, MLP scorer | 0.4290 | 0.9852 | 0.9879 |
+| Predicted drums, K = 4, MLP scorer, 10000 updates | 0.6196 | 0.8959 | 0.9973 |
 | mean relative spectral distance | 0.27 | 0.77 | 6.12 |
 
-Almost all errors are made on the third of the non-matching pairs with the most similar spectra.
-In the other two thirds both models are nearly perfect. Even in the closest third the mean
+For the ring transformer and the invariant features, almost all errors are made on the third of
+the non-matching pairs with the most similar spectra, and in the other two thirds they are nearly
+perfect. The predicted drums models with a linear scorer also fail in the other thirds. Even in the closest third the mean
 relative distance between the spectra of the two drums is large (0.27), so these negative
 examples are easy compared with a drum with almost the same spectrum.
 
@@ -138,10 +171,34 @@ The scripts differ from the notebooks in the following way:
 - **The training accuracy is close to the test accuracy** (0.988 against 0.981 for the ring
   transformer), so there is no sign of overfitting. With only 100 test drums the test
   accuracy on 200 pairs should not be used to rank the models.
+- **The end-to-end predicted drums model is worse and much less stable.** With a scorer with
+  one hidden layer and K = 4 the balanced accuracy over all test pairs is 0.8843 ± 0.0207, and 0.9188 ± 0.0930 with
+  10000 updates, against 0.982 ± 0.003 for the ring transformer. One run out of 20 (K = 4, MLP
+  scorer, 10000 updates, seed 1: 0.996, ROC AUC 0.999) is better than the ring transformer. The
+  spread between seeds is large: with 10000 updates the balanced accuracy is between 0.757 to 0.996, and
+  with the linear scorer and K = 4 between 0.499 to 0.971.
+- **A linear scorer is not enough in practice.** With K = 1 the balanced accuracy is 0.5516 ± 0.1144, close
+  to chance in four of the five seeds: the scorer sees one distance, and the only thing that
+  moves the predicted drum towards the true drum is the classification loss. With K = 4 and a
+  linear scorer it is better on average (0.7529 ± 0.1783), but unstable. A scorer with one hidden layer is
+  clearly better and much more stable (0.8843 ± 0.0207). It can combine the K distances nonlinearly, for
+  example it can act on the smallest of them. More updates helped (0.9188 ± 0.0930 for 10000 updates), and
+  the loss was still decreasing, but we did not run longer.
+- **The K predicted drums are only loosely related to the true drum.** The relative Procrustes
+  distance from the closest of the K predicted drums to the true drum on the test drums is
+  typically between 0.14 and 0.37 (0.025 in the best run), and the mean over the K drums is
+  often above 1. A regression trained directly on the true drums reaches about 0.005 (see the
+  regression report). The predicted drums act as reference shapes conditioned on the spectrum,
+  as the learned reference drums of the invariant features model, rather than as
+  reconstructions of the drum. Among the runs with the MLP scorer we did not find a relation
+  between this error and the accuracy.
 
 ## Caveats
 
 - One dataset of 1000 triangles with a fixed split of 900 and 100 drums.
+- The predicted drums model has only 5 seeds per configuration, and its hyperparameters
+  (the number of drums K, the size of the scorer, the learning rate, the number of updates) were
+  not tuned. Its high variance means that these numbers are rough.
 - The non-matching examples are random pairs of different drums. They are mostly easy, since the
   eigenvalues scale with the size of the drum, and they do not test whether the model can tell
   apart drums with almost the same spectrum.
@@ -158,5 +215,8 @@ The scripts differ from the notebooks in the following way:
 - Harder non-matching pairs: for each drum use the spectrum of the drum with the most similar
   spectrum.
 - Vary the number of the reference drums of the invariant features model.
+- For the predicted drums model: longer training and a tuned learning rate, a scorer that acts
+  on the smallest of the K distances, and initialising the `DrumTransformer` from a regression
+  on the true drums before the end-to-end training.
 - More data, and polygons with more than three vertices, where the number of vertex orderings grows
   as $2 N\_v$.
