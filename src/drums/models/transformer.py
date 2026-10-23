@@ -36,6 +36,9 @@ class DrumTransformer(eqx.Module):
     final norm -> linear decoder applied to the last N_v tokens.
     The model acts on a single drum (eigenvalues (N_eig,) -> vertices (N_v, 2));
     use jax.vmap for batches. The input is expected to be normalised already.
+
+    The decoder gives 2 n_drums numbers for every vertex token, so the output has the shape
+    (N_v, 2 n_drums): n_drums drums are predicted at once (by default one, shape (N_v, 2)).
     """
     encoder: eqx.nn.Linear
     vertex_tokens: jax.Array
@@ -43,15 +46,15 @@ class DrumTransformer(eqx.Module):
     final_norm: eqx.nn.LayerNorm
     decoder: eqx.nn.Linear
 
-    def __init__(self, N_v, N_f, N_eig, key, L, n_heads=4, mlp_ratio=4):
+    def __init__(self, N_v, N_f, N_eig, key, L, n_heads=4, mlp_ratio=4, n_drums=1):
         k_enc, k_tok, k_blocks, k_dec = jr.split(key, 4)
         self.encoder = eqx.nn.Linear(N_eig, N_f, key=k_enc)
         self.vertex_tokens = jr.normal(k_tok, (N_v, N_f)) / jnp.sqrt(N_f)
         self.blocks = [Block(N_f, n_heads, mlp_ratio, k) for k in jr.split(k_blocks, L)]
         self.final_norm = eqx.nn.LayerNorm(N_f)
-        self.decoder = eqx.nn.Linear(N_f, 2, key=k_dec)
+        self.decoder = eqx.nn.Linear(N_f, 2*n_drums, key=k_dec)
 
-    def __call__(self, eigenvalues):             # (N_eig,) -> (N_v, 2)
+    def __call__(self, eigenvalues):             # (N_eig,) -> (N_v, 2 n_drums)
         N_v = self.vertex_tokens.shape[0]
         x = jnp.concatenate([self.encoder(eigenvalues)[None], self.vertex_tokens], axis=0)
         for block in self.blocks:
@@ -114,4 +117,12 @@ if __name__ == "__main__":
         losses.append(float(l))
     print(f"loss: {losses[0]:.4f} -> {losses[-1]:.4f}")
     check("loss decreases when overfitting a batch", losses[-1] < 0.1 * losses[0])
+
+    # several drums at once: the decoder gives 2 n_drums numbers for every vertex
+    K = 4
+    multi = DrumTransformer(N_v, N_f, N_eig, jr.PRNGKey(0), L, n_heads, mlp_ratio, n_drums=K)
+    check("n_drums: output shape (N_v, 2 K)", multi(x).shape == (N_v, 2*K))
+    check("n_drums: vmap over a batch", jax.vmap(multi)(xb).shape == (5, N_v, 2*K))
+    n_multi = sum(p.size for p in jax.tree_util.tree_leaves(eqx.filter(multi, eqx.is_array)))
+    check("n_drums: parameter count", n_multi == expected + (K - 1)*2*(N_f + 1))
     assert ok, "transformer test failed"

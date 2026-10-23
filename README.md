@@ -35,6 +35,11 @@ Python >= 3.9 and the following packages (installed automatically):
 ├── pyproject.toml            # package metadata and dependencies
 ├── README.md
 ├── training/
+│   ├── classification/
+│   │   ├── ring_transformer_classifier.py      # classify (drum, spectrum) pairs with the RingTransformer
+│   │   ├── invariant_features_classifier.py    # the same with invariant distances to learned drums
+│   │   ├── predicted_drums_classifier.py       # end-to-end: distances to drums predicted from the spectrum
+│   │   └── triangle_dataset_experiments.md     # comparison of the two classifiers
 │   └── regression/
 │       ├── align_loss.py       # example training run, loss with aligned and augmented targets
 │       ├── procrustes_loss.py  # example training run, Procrustes loss
@@ -46,9 +51,12 @@ Python >= 3.9 and the following packages (installed automatically):
         │   ├── spectrum.py       # FEM solver: drum shape -> Laplacian eigenvalues
         │   ├── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
         │   ├── discretization.md # how the finite-element discretization works
-        │   └── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
+        │   ├── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
+        │   └── datasets_collection.py  # script that collects the named datasets and saves them
         └── models/
-            └── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
+            ├── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
+            ├── ring_transformer.py  # RingTransformer: invariant/equivariant transformer on closed polygons
+            └── ring_transformer.md  # description of the RingTransformer architecture
 ```
 
 `get_drum_spectrum(drum_perimeter, N_eig, a)` meshes the polygon given by its
@@ -71,10 +79,12 @@ triangle. With `return_all=True` the dictionary also holds, as lists with one en
 `eigenfunctions`, `triangulations` and `coordinates` of the meshes. Running `python src/drums/data/triangle_drums.py` tests the generator and the
 solver on a right isosceles triangle with known spectrum.
 
-`drums.models.transformer.DrumTransformer(N_v, N_f, N_eig, key, L, n_heads=4, mlp_ratio=4)`
+`drums.models.transformer.DrumTransformer(N_v, N_f, N_eig, key, L, n_heads=4, mlp_ratio=4, n_drums=1)`
 maps the (normalised) eigenvalues of one drum to its `N_v` vertices. The spectrum is
 projected to one token, joined with `N_v` learnable vertex tokens, and processed by `L`
 pre-norm transformer blocks; a linear decoder turns the vertex tokens into coordinates.
+With `n_drums=K` the decoder gives `2 K` numbers per vertex, i.e. `K` drums at once, as an array
+of shape `(N_v, 2 K)`.
 Use `jax.vmap` for batches. `python src/drums/models/transformer.py` runs its tests.
 
 The scripts in `training/regression/` are examples of training the transformer on the
@@ -83,3 +93,19 @@ triangle drums dataset (see `drums.data.datasets_collection`), e.g.
 They additionally need `matplotlib`.
 The results of the experiments, including the comparison of the losses, are in
 `training/regression/triangle_dataset_experiments.md`.
+
+`drums.models.ring_transformer.RingTransformer(n, m, N_f, N_inv, key, L, n_heads=4, mlp_ratio=4)`
+takes a closed polygon `X` of `n` vertices in the plane and a context vector `c` of length `m`.
+Its forward pass `model(c, X)` returns an invariant vector (invariant to rotations, reflections,
+translations and cyclic shifts of the vertices) and `n` corrections that are equivariant to the
+same transformations. `model.forward_flip(c, X)` makes both symmetric also under reversion of
+the vertex order. `python src/drums/models/ring_transformer.py` runs the symmetry tests.
+The architecture is described in `src/drums/models/ring_transformer.md`.
+
+`training/classification/` contains two examples that classify pairs (drum shape, spectrum) as
+matching or non-matching, with the ring transformer, with invariant features of the drum, and with
+distances to drums predicted from the spectrum (trained end-to-end).
+They are run in the same way, e.g.
+`python training/classification/ring_transformer_classifier.py --data triangle_drums.npz`.
+The comparison of the two approaches is in
+`training/classification/triangle_dataset_experiments.md`.
