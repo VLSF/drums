@@ -1,0 +1,12 @@
+# Tested Apple Silicon GPU stack (Python 3.12).
+-e .
+jax==0.4.38
+jaxlib==0.4.38
+jax-metal==0.1.1
+equinox==0.11.12
+optax==0.2.4
+chex==0.1.88
+numpy==2.2.6
+ipykernel
+matplotlib
+pandas
