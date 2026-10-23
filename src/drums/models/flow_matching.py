@@ -4,7 +4,27 @@ import jax.numpy as jnp
 import jax.random as jr
 
 from drums.models.transformer import Block
+from drums.models.ring_transformer import RingTransformer
 from drums.data.preprocessing import canonical_triangle
+
+
+class DrumRingTransformerVelocity(eqx.Module):
+    ring: RingTransformer
+    n_vertices: int
+
+    def __init__(self, key, n_vertices=3, n_eig=30, N_f=128, L=3, n_heads=4):
+        self.n_vertices = n_vertices
+
+        self.ring = RingTransformer(
+            n=n_vertices, m=n_eig + 1, N_f=N_f, N_inv=1,
+            key=key, L=L, n_heads=n_heads,
+        )
+
+    def __call__(self, t, x_t, spectrum):
+        context = jnp.concatenate([jnp.atleast_1d(t), spectrum])
+        _, velocity = self.ring.forward_flip(context, x_t)
+        return velocity
+
 
 class DrumTransformerVelocity(eqx.Module):
     spectrum_encoder: eqx.nn.Linear
@@ -101,7 +121,7 @@ def sample(model, spectrum, key, n_steps=30):
     return x
 
 
-def main(seed=17, canonical=False):
+def main(seed, canonical, predictor):
     import numpy as np
     import optax
 
@@ -131,7 +151,12 @@ def main(seed=17, canonical=False):
 
     key = jr.PRNGKey(seed)
     key, init_key = jr.split(key)
-    model = DrumTransformerVelocity(init_key, N_f=256)
+    if predictor == "transformer":
+        model = DrumTransformerVelocity(init_key, N_f=256)
+    elif predictor == "ring":
+        model = DrumRingTransformerVelocity(init_key, N_f=256)
+    else:
+        model = DrumVelocity(init_key)
 
     n_updates = 5000
     schedule = optax.warmup_cosine_decay_schedule(
