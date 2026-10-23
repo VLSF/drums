@@ -1,5 +1,6 @@
 .ipynb_checkpoints/
 .venv/
+.venv-metal/
 *.npz
 __pycache__/
 *.egg-info/
