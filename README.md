@@ -94,6 +94,12 @@ They additionally need `matplotlib`.
 The results of the experiments, including the comparison of the losses, are in
 `training/regression/triangle_dataset_experiments.md`.
 
+`notebooks/flow_matching.ipynb` compares conditional flow matching with that baseline.
+To train with a RingTransformer velocity predictor, call
+`drums.models.flow_matching.main(seed=17, canonical=False, predictor="ring")`.
+It returns `(model, history, spectra, vertices)`. Ring training randomly rotates,
+reflects and reorders targets, preserving their shape and scale without canonicalisation.
+
 `drums.models.ring_transformer.RingTransformer(n, m, N_f, N_inv, key, L, n_heads=4, mlp_ratio=4)`
 takes a closed polygon `X` of `n` vertices in the plane and a context vector `c` of length `m`.
 Its forward pass `model(c, X)` returns an invariant vector (invariant to rotations, reflections,
