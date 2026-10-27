@@ -100,6 +100,12 @@ To train with a RingTransformer velocity predictor, call
 It returns `(model, history, spectra, vertices)`. Ring training randomly rotates,
 reflects and reorders targets, preserving their shape and scale without canonicalisation.
 
+`training/regression/aligned_flow_experiment.py` defaults to 20k aligned FM updates
+(checkpoints: 5k/10k/20k) and full-dataset inference (Euler/50, 32 draws per drum).
+`--features log_ratios` uses `log(lambda_1)` and `log(lambda_k/lambda_1)` (k=2..30),
+standardized on train. Results and feature comparisons are in
+`notebooks/FM_more_epochs_stats.ipynb`.
+
 `drums.models.ring_transformer.RingTransformer(n, m, N_f, N_inv, key, L, n_heads=4, mlp_ratio=4)`
 takes a closed polygon `X` of `n` vertices in the plane and a context vector `c` of length `m`.
 Its forward pass `model(c, X)` returns an invariant vector (invariant to rotations, reflections,
