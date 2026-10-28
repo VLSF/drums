@@ -74,6 +74,9 @@ spectra of a unit square and a 2x1 rectangle. Running
 `python src/drums/data/preprocessing.py` tests `align` and `augment` and checks that
 the spectrum is unchanged by shifts, rotations and cyclic reorderings.
 
+The named datasets below are collected with `python src/drums/data/datasets_collection.py <name> <folder>`,
+which saves `<name>.npz` in `<folder>`. The number of drums is set with `--N_samples` (1000 by default).
+
 `generate_triangle_drums(n_samples, seed, N_eig, ...)` returns a dictionary with the
 vertices (`perimeters`) and the lowest `N_eig` Dirichlet eigenvalues (`spectra`) of random
 triangles whose angles are all at least 30 degrees. The mesh is scaled with the area of each
