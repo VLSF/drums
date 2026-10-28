@@ -53,6 +53,7 @@ Python >= 3.9 and the following packages (installed automatically):
         │   ├── discretization.md # how the finite-element discretization works
         │   ├── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
         │   ├── quadrilateral_drums.py  # random convex / non-convex quadrilateral drums datasets
+        │   ├── gww_drums.py      # perturbed isospectral Gordon-Webb-Wolpert drums dataset
         │   └── datasets_collection.py  # script that collects the named datasets and saves them
         └── models/
             ├── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
@@ -89,6 +90,14 @@ a very short edge, or a vertex within 0.1 rad of straight are rejected, so the t
 The named datasets `convex_quadrilateral_drums` and `mixed_quadrilateral_drums` are in
 `drums.data.datasets_collection`. Running `python src/drums/data/quadrilateral_drums.py` tests the
 samplers, the symmetries of the spectrum and the mesh convergence on non-convex drums.
+
+`generate_gww_drums(n_samples, seed, N_eig, delta, ...)` returns a dataset based on the two isospectral
+drums of Gordon, Webb and Wolpert (9 vertices each). Every drum is one of the two with probability one half
+(`domain` is 0 or 1), and each coordinate of its vertices is shifted by independent uniform noise from
+`[-delta, delta]`, `0 < delta < 0.5`; the noise is drawn again if the boundary would intersect itself. The drum is
+then centred, rotated at random and its first vertex is chosen at random. `perimeters` has shape `(n_samples, 9, 2)`. The named
+dataset is `gww_drums` (`delta=0.1`) in `drums.data.datasets_collection`. Running `python src/drums/data/gww_drums.py`
+checks that the two noise-free drums are isospectral, the samplers and the mesh convergence.
 
 `drums.models.transformer.DrumTransformer(N_v, N_f, N_eig, key, L, n_heads=4, mlp_ratio=4, n_drums=1)`
 maps the (normalised) eigenvalues of one drum to its `N_v` vertices. The spectrum is
