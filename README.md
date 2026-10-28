@@ -52,6 +52,7 @@ Python >= 3.9 and the following packages (installed automatically):
         │   ├── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
         │   ├── discretization.md # how the finite-element discretization works
         │   ├── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
+        │   ├── quadrilateral_drums.py  # random convex / non-convex quadrilateral drums datasets
         │   └── datasets_collection.py  # script that collects the named datasets and saves them
         └── models/
             ├── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
@@ -78,6 +79,16 @@ triangles whose angles are all at least 30 degrees. The mesh is scaled with the 
 triangle. With `return_all=True` the dictionary also holds, as lists with one entry per drum, the
 `eigenfunctions`, `triangulations` and `coordinates` of the meshes. Running `python src/drums/data/triangle_drums.py` tests the generator and the
 solver on a right isosceles triangle with known spectrum.
+
+`generate_quadrilateral_drums(n_samples, seed, N_eig, nonconvex_fraction, ...)` is the analogue
+for quadrilaterals, with `perimeters` of shape `(n_samples, 4, 2)` and an extra boolean `is_convex`.
+With `nonconvex_fraction=0` all drums are convex, with `0.5` each drum is non-convex with
+probability one half. Four random points give either a convex quadrilateral (their hull) or a
+non-convex one with one reflex vertex, and samples with an angle below 30 degrees or above 330 degrees,
+a very short edge, or a vertex within 0.1 rad of straight are rejected, so the two classes are separated.
+The named datasets `convex_quadrilateral_drums` and `mixed_quadrilateral_drums` are in
+`drums.data.datasets_collection`. Running `python src/drums/data/quadrilateral_drums.py` tests the
+samplers, the symmetries of the spectrum and the mesh convergence on non-convex drums.
 
 `drums.models.transformer.DrumTransformer(N_v, N_f, N_eig, key, L, n_heads=4, mlp_ratio=4, n_drums=1)`
 maps the (normalised) eigenvalues of one drum to its `N_v` vertices. The spectrum is
