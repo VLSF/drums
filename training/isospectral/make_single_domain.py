@@ -6,7 +6,9 @@ take domain 0" would still be a coin flip. The canonical choice used here: label
 at T0 is not smaller than the angle at T2 and take the first domain of that pair. It is continuous in the
 shape (for equal angles the two drums are congruent) and it is a function of the spectrum.
 
-For every sample the labelled triangle is recovered from the polygon: the stored polygon is
+If the data have the key `triangle` (generate_isospectral_drums stores the labelled triangle), the angles are read from it and
+nothing is recovered; with canonical_labelling=True the angle at T0 is never smaller than the angle at T2, so the stored drum is
+canonical exactly when domain == 0. For older data without `triangle`, the labelled triangle is recovered from the polygon: the stored polygon is
 pair[domain](T) after a random cyclic shift, so we try the 9 shifts, read T at the root corners, rebuild
 the polygon and compare. Then the label is the stored drum if (domain == 0) == (angle(T0) >= angle(T2)),
 and its twin otherwise. The spectra are not changed (the spectrum of a drum equals that of its twin up to the
@@ -44,18 +46,29 @@ def recover_triangle(polygon, domain):
     return None
 
 
-if __name__ == "__main__":
-    d = dict(np.load(sys.argv[1]))
-    P, Q, dom = d["perimeters"], d["twin_perimeters"], d["domain"]
-    keep = np.zeros(len(P), dtype=bool)
-    failed, flips = [], 0
-    for i in range(len(P)):
-        T = recover_triangle(P[i], dom[i])
+def label_is_stored_drum(triangle, domain):
+    """True if the drum stored in `perimeters` is the canonical drum of its pair."""
+    return (domain == 0) == (angle(triangle[0], triangle[1], triangle[2]) >= angle(triangle[2], triangle[0], triangle[1]))
+
+
+def keep_mask(perimeters, domains, triangles=None):
+    """keep[i]: the stored drum i is canonical. Uses the stored triangles if given, recovers them from the polygons otherwise."""
+    keep = np.zeros(len(perimeters), dtype=bool)
+    failed = []
+    for i in range(len(perimeters)):
+        T = triangles[i] if triangles is not None else recover_triangle(perimeters[i], domains[i])
         if T is None:
             failed.append(i)
             continue
-        keep[i] = (dom[i] == 0) == (angle(T[0], T[1], T[2]) >= angle(T[2], T[0], T[1]))
+        keep[i] = label_is_stored_drum(T, domains[i])
     assert not failed, f"could not recover the triangle of {len(failed)} samples, e.g. {failed[:5]}"
+    return keep
+
+
+if __name__ == "__main__":
+    d = dict(np.load(sys.argv[1]))
+    P, Q, dom = d["perimeters"], d["twin_perimeters"], d["domain"]
+    keep = keep_mask(P, dom, d.get("triangle"))
     P_new, Q_new = np.where(keep[:, None, None], P, Q), np.where(keep[:, None, None], Q, P)
     d.update(perimeters=P_new, twin_perimeters=Q_new, domain=np.zeros_like(dom))
     np.savez(sys.argv[2], **d)

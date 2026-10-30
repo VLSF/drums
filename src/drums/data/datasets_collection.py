@@ -35,7 +35,11 @@ if __name__ == "__main__":
     elif args.dataset_name == "gww_drums":
         data = gww_drums.generate_gww_drums(n_samples, delta=0.1)
     elif args.dataset_name == "isospectral_drums":
-        data = isospectral_drums.generate_isospectral_drums(n_samples)
+        # canonical_labelling: the corners of the base triangle are labelled at random by default, and relabelling two of
+        # them exchanges the names of the two polygons of a pair, so `domain` would be a coin flip given the spectrum.
+        # With canonical labelling `domain` 0 is always the canonical drum of the pair (a continuous function of the
+        # spectrum) and `domain` 1 its isospectral twin, i.e. `domain` has the same meaning in every sample.
+        data = isospectral_drums.generate_isospectral_drums(n_samples, canonical_labelling=True)
 
     os.makedirs(args.save_here, exist_ok=True)
     if os.path.exists(path) and not args.overwrite:  # created while we were computing

@@ -118,8 +118,11 @@ any two neighbours being mirror images in their common edge, are glued into the 
 Buser, Conway, Doyle and Semmler, "Some planar isospectral domains" (arXiv:1005.1839); for the right isosceles triangle
 this is the Gordon-Webb-Wolpert pair. The two polygons are isospectral for every triangle (up to the discretization
 error), and the sample is one of them with probability one half (`domain` is 0 or 1). Besides `perimeters` and `spectra` the
-dataset has `twin_perimeters`, the vertices of the other drum with the same spectrum. Triangles for which a polygon would
-intersect itself (about 10%) are rejected. The named dataset is `isospectral_drums` in `drums.data.datasets_collection`.
+dataset has `twin_perimeters`, the vertices of the other drum with the same spectrum, and `triangle`, the labelled triangle the
+pair is built from. The corners of the triangle are labelled at random, and relabelling two of them exchanges the names of the two
+polygons, so `domain` does not determine the drum from the spectrum; with `canonical_labelling=True` the corners are relabelled so
+that `domain` 0 is always the canonical drum of the pair (a continuous function of the spectrum). Triangles for which a polygon would
+intersect itself (about 10%) are rejected. The named dataset is `isospectral_drums` in `drums.data.datasets_collection` (generated with `canonical_labelling=True`).
 Running `python src/drums/data/isospectral_drums.py` checks the construction against GWW, the isospectrality of random
 pairs, and that the labelling of the triangle corners matters.
 

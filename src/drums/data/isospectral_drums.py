@@ -69,7 +69,14 @@ def isospectral_pair(triangle):
     return tuple(polygons)
 
 
-def random_isospectral_drums(rng, r_min=0.25, r_max=1.5, angle_min=np.pi/6):
+def corner_angle(triangle, i):
+    """Interior angle of the triangle (3, 2) at its corner i."""
+    a, b, c = triangle[i], triangle[(i + 1) % 3], triangle[(i + 2) % 3]
+    u, v = b - a, c - a
+    return np.arccos(np.clip(u @ v / np.linalg.norm(u) / np.linalg.norm(v), -1, 1))
+
+
+def random_isospectral_drums(rng, r_min=0.25, r_max=1.5, angle_min=np.pi/6, canonical_labelling=False):
     """One of the two isospectral domains (each with probability 1/2) of a random triangle.
 
     The base triangle is drawn as in triangle_drums.random_triangle: inscribed in a circle of
@@ -78,21 +85,32 @@ def random_isospectral_drums(rng, r_min=0.25, r_max=1.5, angle_min=np.pi/6):
     the two polygons intersects itself are rejected. The polygons are put in independent random
     poses (centred, rotated, random first vertex), see gww_drums.random_pose.
 
+    The corners of the triangle are labelled (T0, T1, T2) at random, and relabelling T0 <-> T2
+    gives the same two polygons with the names (domains 0 and 1) exchanged. So by default
+    the domain of a sample says nothing about the shape: the spectrum does not determine it.
+    With canonical_labelling the corners are relabelled so that the angle at T0 is not smaller
+    than the angle at T2 (this does not change the distribution of the drums and uses no random
+    numbers). Domain 0 is then always the canonical drum of the pair: a continuous function of the
+    spectrum (for equal angles the two polygons are congruent).
+
     Returns the vertices of the chosen domain and of its isospectral partner, both of shape
-    (9, 2), and the index of the chosen domain, 0 or 1.
+    (9, 2), the index of the chosen domain, 0 or 1, and the labelled triangle (3, 2).
     """
     while True:
         triangle = random_triangle(rng, r_min, r_max, angle_min)
+        if canonical_labelling and corner_angle(triangle, 0) < corner_angle(triangle, 2):
+            triangle = triangle[[2, 1, 0]]
         pair = isospectral_pair(triangle)
         if all(is_simple(p) for p in pair):
             break
     domain = int(rng.uniform() >= 0.5)
     drum, twin = pair[domain], pair[1 - domain]
-    return random_pose(rng, drum), random_pose(rng, twin), domain
+    return random_pose(rng, drum), random_pose(rng, twin), domain, triangle
 
 
 def generate_isospectral_drums(n_samples, seed=0, N_eig=30, n_elements=4000,
-                               r_min=0.25, r_max=1.5, angle_min=np.pi/6, return_all=False):
+                               r_min=0.25, r_max=1.5, angle_min=np.pi/6, canonical_labelling=False,
+                               return_all=False):
     """Dataset of isospectral drums: for every spectrum there are two different drums.
 
     A triangle is drawn at random, 7 copies of it are glued into the two isospectral domains
@@ -109,10 +127,13 @@ def generate_isospectral_drums(n_samples, seed=0, N_eig=30, n_elements=4000,
     Returns a dict with
         'perimeters':      (n_samples, 9, 2) vertices of the drums, counter-clockwise,
         'spectra':         (n_samples, N_eig) smallest Dirichlet eigenvalues, ascending,
-        'domain':          (n_samples,) 0 if the drum is the first domain of the pair (GWW_1 like),
-                           1 if it is the second one (GWW_2 like),
+        'domain':          (n_samples,) 0 if the drum is the first domain of the pair built from the
+                           labelled triangle, 1 if it is the second one (for the right isosceles triangle
+                           they are GWW_1 and GWW_2). It is a coin flip given the spectrum unless
+                           canonical_labelling is True, then domain 0 is the canonical drum of the pair,
         'twin_perimeters': (n_samples, 9, 2) vertices of the other domain of the pair, which has
-                           the same spectrum (its pose and first vertex are random, too).
+                           the same spectrum (its pose and first vertex are random, too),
+        'triangle':        (n_samples, 3, 2) the labelled triangle (T0, T1, T2) the two domains are built from.
     If return_all is True, the dictionary also contains lists (one entry per drum,
     the meshes differ in size) with everything get_drum_spectrum produces:
         'eigenfunctions': (N, N_eig) values at the mesh nodes, columns ordered as the spectrum,
@@ -120,10 +141,10 @@ def generate_isospectral_drums(n_samples, seed=0, N_eig=30, n_elements=4000,
         'coordinates':    (N, 2) mesh nodes.
     """
     rng = np.random.default_rng(seed)
-    perimeters, twins, spectra, domains = [], [], [], []
+    perimeters, twins, spectra, domains, triangles = [], [], [], [], []
     extra = dict(eigenfunctions=[], triangulations=[], coordinates=[])
     for _ in range(n_samples):
-        drum, twin, domain = random_isospectral_drums(rng, r_min, r_max, angle_min)
+        drum, twin, domain, triangle = random_isospectral_drums(rng, r_min, r_max, angle_min, canonical_labelling)
         a = polygon_area(drum) / n_elements
         lam, phi, X, T = get_drum_spectrum(drum, N_eig=N_eig, a=a)
         order = np.argsort(lam)
@@ -131,12 +152,13 @@ def generate_isospectral_drums(n_samples, seed=0, N_eig=30, n_elements=4000,
         twins.append(twin)
         spectra.append(lam[order])
         domains.append(domain)
+        triangles.append(triangle)
         if return_all:  # only keep the mesh data if it is returned
             extra["eigenfunctions"].append(phi[:, order])
             extra["triangulations"].append(T)
             extra["coordinates"].append(X)
     data = dict(perimeters=np.stack(perimeters), spectra=np.stack(spectra), domain=np.array(domains),
-                twin_perimeters=np.stack(twins))
+                twin_perimeters=np.stack(twins), triangle=np.stack(triangles))
     if return_all:
         data.update(extra)
     return data
@@ -221,7 +243,7 @@ if __name__ == "__main__":
     data = generate_isospectral_drums(n_samples, seed=0, N_eig=N_eig)
     print(f"generated {n_samples} drums in {time.time() - t0:.1f} s")
     P, S, D, Q = data["perimeters"], data["spectra"], data["domain"], data["twin_perimeters"]
-    check("keys", set(data) == {"perimeters", "spectra", "domain", "twin_perimeters"})
+    check("keys", set(data) == {"perimeters", "spectra", "domain", "twin_perimeters", "triangle"})
     check("shapes", P.shape == (n_samples, 9, 2) and Q.shape == P.shape and S.shape == (n_samples, N_eig)
           and D.shape == (n_samples,))
     check("finite and positive", np.all(np.isfinite(S)) and np.all(S > 0))
@@ -236,13 +258,31 @@ if __name__ == "__main__":
           np.allclose(twin_spectra, S[:5], rtol=2e-3))
     check("reproducible", np.allclose(generate_isospectral_drums(2, seed=0, N_eig=N_eig)["spectra"], S[:2]))
     samples = [random_isospectral_drums(np.random.default_rng(i)) for i in range(400)]
-    frac = np.mean([d for _, _, d in samples])
+    frac = np.mean([d for _, _, d, _ in samples])
     check(f"probability of the second domain is 1/2 (observed {frac:.3f})", abs(frac - 0.5) < 0.1)
-    check("first vertex is random", len({int(np.argmin(p[:, 1])) for p, _, _ in samples}) == 9)
+    check("first vertex is random", len({int(np.argmin(p[:, 1])) for p, _, _, _ in samples}) == 9)
+
+    # the stored triangle builds the stored drum and its twin
+    pair_ok = all(_congruence_distance(isospectral_pair(t)[d], p) < 1e-8 and _congruence_distance(isospectral_pair(t)[1 - d], q) < 1e-8
+                  for t, d, p, q in zip(data["triangle"], D, P, Q))
+    check("the drum and the twin are the two polygons of the stored triangle", pair_ok)
+
+    # canonical labelling: angle(T0) >= angle(T2), domain 0 is the canonical drum, the same triangles as without it
+    canonical = generate_isospectral_drums(8, seed=0, N_eig=N_eig, canonical_labelling=True)
+    plain = generate_isospectral_drums(8, seed=0, N_eig=N_eig)
+    check("canonical labelling: angle(T0) >= angle(T2)",
+          all(corner_angle(t, 0) >= corner_angle(t, 2) - 1e-12 for t in canonical["triangle"]))
+    check("canonical labelling: the same triangles up to the relabelling T0 <-> T2 and the same domain draws",
+          all(np.allclose(a, b) or np.allclose(a, b[[2, 1, 0]]) for a, b in zip(canonical["triangle"], plain["triangle"])))
+    # a canonical drum does not depend on the original labelling: domain 0 of the canonical triangle
+    def canonical_drum(t):
+        return isospectral_pair(t if corner_angle(t, 0) >= corner_angle(t, 2) else t[[2, 1, 0]])[0]
+    check("the canonical drum is the same for T and for the relabelled triangle",
+          all(_congruence_distance(canonical_drum(t), canonical_drum(t[[2, 1, 0]])) < 1e-8 for t in plain["triangle"]))
 
     full = generate_isospectral_drums(2, seed=0, N_eig=N_eig, return_all=True)
     phi, X, T = full["eigenfunctions"][0], full["coordinates"][0], full["triangulations"][0]
-    check("return_all keys", set(full) == {"perimeters", "spectra", "domain", "twin_perimeters", "eigenfunctions",
+    check("return_all keys", set(full) == {"perimeters", "spectra", "domain", "twin_perimeters", "triangle", "eigenfunctions",
                                           "triangulations", "coordinates"})
     check("return_all spectra unchanged", np.allclose(full["spectra"], S[:2]) and np.allclose(full["perimeters"], P[:2]))
     check("return_all sizes", len(full["eigenfunctions"]) == len(full["triangulations"]) == len(full["coordinates"]) == 2

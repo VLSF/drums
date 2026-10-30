@@ -41,7 +41,10 @@ exact ones, which is irrelevant for the comparison.
 labelled at random by the sampler and relabelling T0 <-> T2 gives the same two polygons with the names exchanged (checked numerically).
 The canonical drum is the first polygon of the labelling with angle(T0) >= angle(T2): for every sample the labelled triangle is
 recovered from its polygon (`make_single_domain.py`), the stored drum is kept if it is canonical (15,030 of 30,000 samples) and replaced by its twin otherwise.
-The rule is continuous in the shape (for equal angles the two polygons are congruent). A first version of the control, "always
+The rule is continuous in the shape (for equal angles the two polygons are congruent). (Data generated with the current
+`generate_isospectral_drums` store the labelled triangle in the key `triangle`, and with `canonical_labelling=True` the canonical drum is just
+domain 0, so the recovery is not needed; `make_single_domain.py` uses the stored triangle if present, and `check_canonical_label.py` checks
+that the recovery, the stored triangle and the canonical generator give the same drum. The control reported here was made with the recovery.) A first version of the control, "always
 domain 0", was wrong for the reason above and was discarded.
 
 **Methods.**
