@@ -1,0 +1,29 @@
+{
+ "args": {
+  "data": "isospectral_30k.npz",
+  "features": "ratio",
+  "loss": "squared",
+  "n_updates": 30000,
+  "batch": 128,
+  "N_f": 256,
+  "L": 5,
+  "lr": 0.0005,
+  "seed": 0,
+  "paired": true,
+  "out": "results_paired/reg_ratio_squared.json"
+ },
+ "train_error": 0.18830876052379608,
+ "val_error": 0.18864746391773224,
+ "test": {
+  "n_separated": 1308,
+  "mean_sep": 0.41279810667037964,
+  "error": 0.18567845225334167,
+  "error_separated": 0.20892128348350525,
+  "error_set": 0.2000085860490799,
+  "sharp": 0.0,
+  "blurry": 0.9915902140672783,
+  "mean_set_over_sep": 0.4866190254688263,
+  "mid_over_sep": 0.11781726032495499,
+  "pick": NaN
+ }
+}

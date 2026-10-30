@@ -1,0 +1,86 @@
+{
+ "args": {
+  "data": "isospectral_30k.npz",
+  "features": "ratio",
+  "paired": true,
+  "n_updates": 40000,
+  "batch": 128,
+  "N_f": 256,
+  "L": 3,
+  "lr": 0.001,
+  "n_samples": 16,
+  "n_eval": 1500,
+  "seed": 0,
+  "out": "results_fm/fm_paired_ratio.json"
+ },
+ "n_train_pairs": 54000,
+ "final_train_loss": 0.007508086540736258,
+ "test_steps50": {
+  "draws": {
+   "n_separated": 20928,
+   "mean_sep": 0.41279810667037964,
+   "error": 0.19164831936359406,
+   "error_separated": 0.21441540122032166,
+   "error_set": 0.019361326470971107,
+   "sharp": 0.9553230122324159,
+   "blurry": 0.027188455657492356,
+   "mean_set_over_sep": 0.05497192218899727,
+   "mid_over_sep": 0.5029600262641907,
+   "pick": 0.49947481618566497
+  },
+  "mode_balance": {
+   "mean_fraction_nearer_truth": 0.4997610856269113,
+   "std_over_drums": 0.12203797627106996,
+   "std_if_binomial": 0.125,
+   "both_modes": 0.9992354740061162
+  },
+  "mean_of_draws": {
+   "n_separated": 1308,
+   "mean_sep": 0.41279810667037964,
+   "error": 0.19212882220745087,
+   "error_separated": 0.21611471474170685,
+   "error_set": 0.17396970093250275,
+   "sharp": 0.028287461773700305,
+   "blurry": 0.6169724770642202,
+   "mean_set_over_sep": 0.41960975527763367,
+   "mid_over_sep": 0.13270354270935059,
+   "pick": 0.40540540540540543
+  },
+  "energy_score": 0.08658076077699661,
+  "mean_error_draws": 0.19164831936359406
+ },
+ "test_steps200": {
+  "draws": {
+   "n_separated": 20928,
+   "mean_sep": 0.41279810667037964,
+   "error": 0.19104161858558655,
+   "error_separated": 0.2137214094400406,
+   "error_set": 0.01677534729242325,
+   "sharp": 0.9730504587155964,
+   "blurry": 0.015433868501529053,
+   "mean_set_over_sep": 0.0470430888235569,
+   "mid_over_sep": 0.504856526851654,
+   "pick": 0.5
+  },
+  "mode_balance": {
+   "mean_fraction_nearer_truth": 0.49928325688073394,
+   "std_over_drums": 0.12164392817761768,
+   "std_if_binomial": 0.125,
+   "both_modes": 1.0
+  },
+  "mean_of_draws": {
+   "n_separated": 1308,
+   "mean_sep": 0.41279810667037964,
+   "error": 0.19172890484333038,
+   "error_separated": 0.2157682627439499,
+   "error_set": 0.17391282320022583,
+   "sharp": 0.03363914373088685,
+   "blurry": 0.6238532110091743,
+   "mean_set_over_sep": 0.4188733696937561,
+   "mid_over_sep": 0.11860951036214828,
+   "pick": 0.5
+  },
+  "energy_score": 0.0867585837841034,
+  "mean_error_draws": 0.19104161858558655
+ }
+}

@@ -1,0 +1,86 @@
+{
+ "args": {
+  "data": "isospectral_30k.npz",
+  "features": "ratio_white",
+  "paired": false,
+  "n_updates": 40000,
+  "batch": 128,
+  "N_f": 256,
+  "L": 3,
+  "lr": 0.001,
+  "n_samples": 16,
+  "n_eval": 1500,
+  "seed": 0,
+  "out": "results_fm/fm_main_ratio_white.json"
+ },
+ "n_train_pairs": 27000,
+ "final_train_loss": 0.0075890886289998885,
+ "test_steps50": {
+  "draws": {
+   "n_separated": 20928,
+   "mean_sep": 0.41279810667037964,
+   "error": 0.19333939254283905,
+   "error_separated": 0.21639718115329742,
+   "error_set": 0.020131349563598633,
+   "sharp": 0.9565175840978594,
+   "blurry": 0.026662844036697247,
+   "mean_set_over_sep": 0.0572454072535038,
+   "mid_over_sep": 0.5045199394226074,
+   "pick": 0.4962034169247677
+  },
+  "mode_balance": {
+   "mean_fraction_nearer_truth": 0.49579510703363916,
+   "std_over_drums": 0.12459413647744588,
+   "std_if_binomial": 0.125,
+   "both_modes": 1.0
+  },
+  "mean_of_draws": {
+   "n_separated": 1308,
+   "mean_sep": 0.41279810667037964,
+   "error": 0.19397056102752686,
+   "error_separated": 0.21821393072605133,
+   "error_set": 0.17297787964344025,
+   "sharp": 0.03746177370030581,
+   "blurry": 0.613914373088685,
+   "mean_set_over_sep": 0.41736581921577454,
+   "mid_over_sep": 0.1384868025779724,
+   "pick": 0.40816326530612246
+  },
+  "energy_score": 0.086912140250206,
+  "mean_error_draws": 0.19333939254283905
+ },
+ "test_steps200": {
+  "draws": {
+   "n_separated": 20928,
+   "mean_sep": 0.41279810667037964,
+   "error": 0.19322876632213593,
+   "error_separated": 0.21625275909900665,
+   "error_set": 0.0180133618414402,
+   "sharp": 0.9739105504587156,
+   "blurry": 0.01595948012232416,
+   "mean_set_over_sep": 0.050581514835357666,
+   "mid_over_sep": 0.5069664120674133,
+   "pick": 0.4959768423118438
+  },
+  "mode_balance": {
+   "mean_fraction_nearer_truth": 0.49593845565749234,
+   "std_over_drums": 0.12434696942039651,
+   "std_if_binomial": 0.125,
+   "both_modes": 0.9984709480122325
+  },
+  "mean_of_draws": {
+   "n_separated": 1308,
+   "mean_sep": 0.41279810667037964,
+   "error": 0.1938580572605133,
+   "error_separated": 0.21817561984062195,
+   "error_set": 0.17255204916000366,
+   "sharp": 0.04204892966360856,
+   "blurry": 0.6070336391437309,
+   "mean_set_over_sep": 0.4157353341579437,
+   "mid_over_sep": 0.12230001389980316,
+   "pick": 0.43636363636363634
+  },
+  "energy_score": 0.08742771297693253,
+  "mean_error_draws": 0.19322876632213593
+ }
+}

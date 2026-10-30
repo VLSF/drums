@@ -40,6 +40,15 @@ Python >= 3.9 and the following packages (installed automatically):
 │   │   ├── invariant_features_classifier.py    # the same with invariant distances to learned drums
 │   │   ├── predicted_drums_classifier.py       # end-to-end: distances to drums predicted from the spectrum
 │   │   └── triangle_dataset_experiments.md     # comparison of the two classifiers
+│   ├── isospectral/
+│   │   ├── generate_data.py    # 30k drums of the isospectral_drums dataset, in parallel
+│   │   ├── baselines.py        # oracle nearest shape and spectral kNN
+│   │   ├── regression.py       # DrumTransformer regression (relative or squared aligned loss)
+│   │   ├── fm.py               # flow matching with the RingTransformer, draws scored against the twin
+│   │   ├── metrics.py          # distances to the isospectral twin: sharp / blurry / pick
+│   │   ├── common.py           # alignment, Procrustes mean, input features, training loop
+│   │   ├── make_single_domain.py  # control without ambiguity: canonical drum as the label
+│   │   └── isospectral_dataset_experiments.md  # report: regression blurs, flow matching does not
 │   └── regression/
 │       ├── align_loss.py       # example training run, loss with aligned and augmented targets
 │       ├── procrustes_loss.py  # example training run, Procrustes loss

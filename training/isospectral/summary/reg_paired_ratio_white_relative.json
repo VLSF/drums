@@ -1,0 +1,29 @@
+{
+ "args": {
+  "data": "isospectral_30k.npz",
+  "features": "ratio_white",
+  "loss": "relative",
+  "n_updates": 30000,
+  "batch": 128,
+  "N_f": 256,
+  "L": 5,
+  "lr": 0.0005,
+  "seed": 0,
+  "paired": true,
+  "out": "results_paired/reg_ratio_white_relative.json"
+ },
+ "train_error": 0.1628933846950531,
+ "val_error": 0.16244558990001678,
+ "test": {
+  "n_separated": 1308,
+  "mean_sep": 0.41279810667037964,
+  "error": 0.15856163203716278,
+  "error_separated": 0.17807282507419586,
+  "error_set": 0.1383558213710785,
+  "sharp": 0.04892966360856269,
+  "blurry": 0.21330275229357798,
+  "mean_set_over_sep": 0.3459911644458771,
+  "mid_over_sep": 0.4367355704307556,
+  "pick": 0.671875
+ }
+}
