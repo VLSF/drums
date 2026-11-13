@@ -1,0 +1,566 @@
+{
+  "method": "conditional_diffusion",
+  "args": {
+    "data": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/isospectral_30k.npz",
+    "out": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112/conway_main_ratio",
+    "features": "ratio",
+    "coordinate_scale": "rms",
+    "paired": false,
+    "n_updates": 40000,
+    "batch": 128,
+    "N_f": 256,
+    "L": 3,
+    "n_heads": 4,
+    "time_features": 32,
+    "lr": 0.001,
+    "ema_decay": 0.999,
+    "seed": 0,
+    "n_steps": 1000,
+    "beta_start": 0.0001,
+    "beta_end": 0.02,
+    "n_train": 27000,
+    "n_val": 1500,
+    "n_test": 1500,
+    "eval_every": 1000,
+    "checkpoint_every": 5000,
+    "train_chunk": 100,
+    "data_sha256": "083eaca4cae5acc272f1f434f5627600f03820f623cf0b683b42253e9a6edad2",
+    "n_eig": 30,
+    "versions": {
+      "jax": "0.4.38",
+      "equinox": "0.11.12",
+      "optax": "0.2.4",
+      "numpy": "2.2.6"
+    },
+    "devices": [
+      "METAL:0"
+    ],
+    "source_sha256": {
+      "src/drums/models/diffusion.py": "c4479077f9a73dfa51282f6460fdac73bb83e8e4ff77268b9e135d806264ec74",
+      "src/drums/models/ring_transformer.py": "c3b0768c4092e152dc6fef517a8eafa3b6aa1dbdbba4f9fde3ec4c1e83e59007",
+      "training/isospectral/diffusion.py": "43b6ea4484bcfe67e3b7606a0f267d17dd70092bda7892e57d47721120406fad",
+      "training/isospectral/common.py": "6796f30646450ab74fcbd9ec6fc1f1a75b036f1b5bfb865bddbe60829da1c113",
+      "training/isospectral/metrics.py": "5f590c48813ea7b7d73161dacf1dbc52f6e8ba209ec07ab2677a866d2cec834a"
+    },
+    "matched_reference_split": true,
+    "gaussian_skip": false,
+    "data_std": 1.0,
+    "n_eval": 1500,
+    "n_samples": 16
+  },
+  "config": {
+    "data": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/isospectral_30k.npz",
+    "out": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112/conway_main_ratio",
+    "features": "ratio",
+    "coordinate_scale": "rms",
+    "paired": false,
+    "n_updates": 40000,
+    "batch": 128,
+    "N_f": 256,
+    "L": 3,
+    "n_heads": 4,
+    "time_features": 32,
+    "lr": 0.001,
+    "ema_decay": 0.999,
+    "seed": 0,
+    "n_steps": 1000,
+    "beta_start": 0.0001,
+    "beta_end": 0.02,
+    "n_train": 27000,
+    "n_val": 1500,
+    "n_test": 1500,
+    "eval_every": 1000,
+    "checkpoint_every": 5000,
+    "train_chunk": 100,
+    "data_sha256": "083eaca4cae5acc272f1f434f5627600f03820f623cf0b683b42253e9a6edad2",
+    "n_eig": 30,
+    "versions": {
+      "jax": "0.4.38",
+      "equinox": "0.11.12",
+      "optax": "0.2.4",
+      "numpy": "2.2.6"
+    },
+    "devices": [
+      "METAL:0"
+    ],
+    "source_sha256": {
+      "src/drums/models/diffusion.py": "c4479077f9a73dfa51282f6460fdac73bb83e8e4ff77268b9e135d806264ec74",
+      "src/drums/models/ring_transformer.py": "c3b0768c4092e152dc6fef517a8eafa3b6aa1dbdbba4f9fde3ec4c1e83e59007",
+      "training/isospectral/diffusion.py": "43b6ea4484bcfe67e3b7606a0f267d17dd70092bda7892e57d47721120406fad",
+      "training/isospectral/common.py": "6796f30646450ab74fcbd9ec6fc1f1a75b036f1b5bfb865bddbe60829da1c113",
+      "training/isospectral/metrics.py": "5f590c48813ea7b7d73161dacf1dbc52f6e8ba209ec07ab2677a866d2cec834a"
+    },
+    "matched_reference_split": true,
+    "gaussian_skip": false,
+    "data_std": 1.0
+  },
+  "n_train_pairs": 27000,
+  "final_train_loss": 0.07072663307189941,
+  "training": {
+    "completed_updates": 40000,
+    "n_train_pairs": 27000,
+    "elapsed_seconds": 1779.385120668012,
+    "final_validation": {
+      "update": 40000,
+      "loss": 0.07112471014261246,
+      "ema_loss": 0.07113106548786163,
+      "elapsed_seconds": 1779.202748751035
+    }
+  },
+  "test_steps50": {
+    "draws": {
+      "n_separated": 20928,
+      "mean_sep": 0.41279810667037964,
+      "error": 0.19199888408184052,
+      "error_separated": 0.21457284688949585,
+      "error_set": 0.02237015590071678,
+      "sharp": 0.9283734709480123,
+      "blurry": 0.04028096330275229,
+      "mean_set_over_sep": 0.06647556275129318,
+      "mid_over_sep": 0.49667516350746155,
+      "pick": 0.5007977765196356
+    },
+    "mode_balance": {
+      "mean_fraction_nearer_truth": 0.5009556574923547,
+      "std_over_drums": 0.12559222986290886,
+      "std_if_binomial": 0.125,
+      "both_modes": 0.9977064220183486
+    },
+    "mean_of_draws": {
+      "n_separated": 1308,
+      "mean_sep": 0.41279810667037964,
+      "error": 0.1932070106267929,
+      "error_separated": 0.2172277569770813,
+      "error_set": 0.17256301641464233,
+      "sharp": 0.03363914373088685,
+      "blurry": 0.6047400611620795,
+      "mean_set_over_sep": 0.4165021777153015,
+      "mid_over_sep": 0.1329692006111145,
+      "pick": 0.4318181818181818
+    },
+    "energy_score": 0.09265222400426865,
+    "mean_error_draws": 0.19199888408184052,
+    "energy_score_interpretation": "Legacy asymmetric-distance diagnostic; not established as a proper scoring rule",
+    "n_spectra": 1500,
+    "n_samples": 16,
+    "sep_min": 0.1
+  },
+  "test_steps200": {
+    "draws": {
+      "n_separated": 20928,
+      "mean_sep": 0.41279810667037964,
+      "error": 0.18660764396190643,
+      "error_separated": 0.20917478203773499,
+      "error_set": 0.008786503225564957,
+      "sharp": 0.9876242354740061,
+      "blurry": 0.0047305045871559636,
+      "mean_set_over_sep": 0.027720198035240173,
+      "mid_over_sep": 0.4984384775161743,
+      "pick": 0.5040882481010208
+    },
+    "mode_balance": {
+      "mean_fraction_nearer_truth": 0.5040615443425076,
+      "std_over_drums": 0.12996031003057015,
+      "std_if_binomial": 0.125,
+      "both_modes": 1.0
+    },
+    "mean_of_draws": {
+      "n_separated": 1308,
+      "mean_sep": 0.41279810667037964,
+      "error": 0.19154328107833862,
+      "error_separated": 0.21559199690818787,
+      "error_set": 0.16986802220344543,
+      "sharp": 0.04434250764525994,
+      "blurry": 0.5749235474006116,
+      "mean_set_over_sep": 0.40866321325302124,
+      "mid_over_sep": 0.1097857728600502,
+      "pick": 0.5344827586206896
+    },
+    "energy_score": 0.0928204134106636,
+    "mean_error_draws": 0.18660764396190643,
+    "energy_score_interpretation": "Legacy asymmetric-distance diagnostic; not established as a proper scoring rule",
+    "n_spectra": 1500,
+    "n_samples": 16,
+    "sep_min": 0.1
+  },
+  "evaluation": {
+    "test_steps50": {
+      "split": "test",
+      "seed": 443,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "chunk_size": 4,
+      "weights": "ema",
+      "sampler": "ddim",
+      "sampling_block": 0,
+      "sampling_steps": 50,
+      "eta": 1.0,
+      "completed_updates": 40000,
+      "devices": [
+        "METAL:0"
+      ],
+      "versions": {
+        "jax": "0.4.38",
+        "equinox": "0.11.12",
+        "optax": "0.2.4"
+      }
+    },
+    "test_steps200": {
+      "split": "test",
+      "seed": 443,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "chunk_size": 4,
+      "weights": "ema",
+      "sampler": "ddim",
+      "sampling_block": 0,
+      "sampling_steps": 200,
+      "eta": 1.0,
+      "completed_updates": 40000,
+      "devices": [
+        "METAL:0"
+      ],
+      "versions": {
+        "jax": "0.4.38",
+        "equinox": "0.11.12",
+        "optax": "0.2.4"
+      }
+    }
+  },
+  "timing": {
+    "test_steps50": {
+      "training_seconds": 1779.385120668012,
+      "sample_seconds": 146.5999779170088,
+      "metric_seconds": 1.8685140000015963
+    },
+    "test_steps200": {
+      "training_seconds": 1779.385120668012,
+      "sample_seconds": 558.2874401670124,
+      "metric_seconds": 2.031500082986895
+    }
+  },
+  "sampler": {
+    "name": "DDIM",
+    "eta": 1.0,
+    "trained_steps": 1000,
+    "evaluated_steps": [
+      50,
+      200
+    ],
+    "weights": "EMA"
+  },
+  "fem_test_steps200": {
+    "run": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112/conway_main_ratio",
+    "evaluation_prefix": "test_ddim200_ema_eta1",
+    "evaluation": {
+      "split": "test",
+      "seed": 443,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "chunk_size": 4,
+      "weights": "ema",
+      "sampler": "ddim",
+      "sampling_block": 0,
+      "sampling_steps": 200,
+      "eta": 1.0,
+      "completed_updates": 40000,
+      "devices": [
+        "METAL:0"
+      ],
+      "versions": {
+        "jax": "0.4.38",
+        "equinox": "0.11.12",
+        "optax": "0.2.4"
+      }
+    },
+    "data": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/isospectral_30k.npz",
+    "data_sha256": "083eaca4cae5acc272f1f434f5627600f03820f623cf0b683b42253e9a6edad2",
+    "samples_sha256": "d246f99f07767c2a3813b4c498e38996076b6063848e057cbe24c076dfb71133",
+    "split": "test",
+    "seed": 20261112,
+    "selected_evaluation_rows": [
+      77,
+      134,
+      143,
+      146,
+      148,
+      159,
+      180,
+      190,
+      205,
+      464,
+      475,
+      488,
+      507,
+      598,
+      602,
+      622,
+      632,
+      794,
+      897,
+      966,
+      1019,
+      1033,
+      1128,
+      1186,
+      1189,
+      1287,
+      1308,
+      1338,
+      1447,
+      1463
+    ],
+    "selected_dataset_ids": [
+      28577,
+      28634,
+      28643,
+      28646,
+      28648,
+      28659,
+      28680,
+      28690,
+      28705,
+      28964,
+      28975,
+      28988,
+      29007,
+      29098,
+      29102,
+      29122,
+      29132,
+      29294,
+      29397,
+      29466,
+      29519,
+      29533,
+      29628,
+      29686,
+      29689,
+      29787,
+      29808,
+      29838,
+      29947,
+      29963
+    ],
+    "draws_per_selected_row": 4,
+    "selection": "Independent fixed random row subset; first saved draws; no selection by quality",
+    "n_elements": 4000,
+    "solved_eigenvalues": 30,
+    "target_scale": 1.313789963722229,
+    "scale_fitting": false,
+    "spectral_error": "mean(abs(recomputed_eigenvalues / supplied_eigenvalues - 1))",
+    "all_draw_validity_criterion": "Finite coordinates, distinct vertices, positive area, existing is_simple crossing test",
+    "selected_validity_criterion": "Robust spectral_ablation_metrics.is_valid before FEM",
+    "denominator": "All requested cases retained; failures counted; spectral means and medians use successful solves only",
+    "workers": 2,
+    "all_saved_draws": {
+      "total_draws": 24000,
+      "valid_draws": 23988,
+      "invalid_draws": 12,
+      "valid_fraction": 0.9995
+    },
+    "selected_cases": {
+      "generated": {
+        "total_cases": 120,
+        "successful_cases": 120,
+        "invalid_cases": 0,
+        "solver_error_cases": 0,
+        "success_fraction_all_cases": 1.0,
+        "below_1pct_fraction_all_cases": 0.8083333333333333,
+        "mean_all30_mare_successes": 0.012040280252821127,
+        "median_all30_mare_successes": 0.004183371528381165,
+        "mean_first5_mare_successes": 0.013648449209065902,
+        "mean_high25_mare_successes": 0.01171864646157217
+      },
+      "target": {
+        "total_cases": 30,
+        "successful_cases": 30,
+        "invalid_cases": 0,
+        "solver_error_cases": 0,
+        "success_fraction_all_cases": 1.0,
+        "below_1pct_fraction_all_cases": 1.0,
+        "mean_all30_mare_successes": 0.00011161785059356376,
+        "median_all30_mare_successes": 0.00011217515492622695,
+        "mean_first5_mare_successes": 7.590071931716939e-05,
+        "mean_high25_mare_successes": 0.00011876127684884263
+      },
+      "twin": {
+        "total_cases": 30,
+        "successful_cases": 30,
+        "invalid_cases": 0,
+        "solver_error_cases": 0,
+        "success_fraction_all_cases": 1.0,
+        "below_1pct_fraction_all_cases": 1.0,
+        "mean_all30_mare_successes": 0.00012385258507708355,
+        "median_all30_mare_successes": 0.00011813909288573472,
+        "mean_first5_mare_successes": 0.00010418664161770434,
+        "mean_high25_mare_successes": 0.0001277857737689594
+      }
+    },
+    "elapsed_seconds": 22.98114720900776
+  },
+  "matched_flow_matching": {
+    "sampler": "Euler",
+    "source": {
+      "path": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/summary/fm_main_ratio.json",
+      "sha256": "19d4e4f236058cbda254d6de8f6ef881b85db8ff549e5d81f707053f5193a25a"
+    },
+    "deltas": {
+      "test_steps50": {
+        "delta_error": -9.649991989135742e-05,
+        "delta_error_set": 0.0012208912521600723,
+        "delta_sharp": -0.02331804281345562,
+        "delta_blurry": 0.008744266055045871,
+        "delta_e_set_over_sep": 0.008755356073379517,
+        "delta_mid_over_sep": -0.009254485368728638,
+        "delta_pick": -0.001185453886550003,
+        "delta_both_modes": -0.001529051987767649,
+        "delta_mean_fraction_nearer_truth": -0.0010512232415902378,
+        "delta_std_fraction_nearer_truth": 0.0009433133046864856,
+        "delta_mean_of_draws_sharp": -0.005351681957186549,
+        "delta_mean_of_draws_blurry": -0.001529051987767649,
+        "delta_mean_of_draws_e_set_over_sep": -0.00035944581031799316,
+        "delta_legacy_energy_diagnostic": 0.00669010728597641
+      },
+      "test_steps200": {
+        "delta_error": -0.005117937922477722,
+        "delta_error_set": -0.010000303387641907,
+        "delta_sharp": 0.017775229357798183,
+        "delta_blurry": -0.014000382262996942,
+        "delta_e_set_over_sep": -0.02320588380098343,
+        "delta_mid_over_sep": -0.00841987133026123,
+        "delta_pick": 0.0029797098934039035,
+        "delta_both_modes": 0.000764525993883769,
+        "delta_mean_fraction_nearer_truth": 0.0023891437308868335,
+        "delta_std_fraction_nearer_truth": 0.004625520221679114,
+        "delta_mean_of_draws_sharp": 0.0045871559633027525,
+        "delta_mean_of_draws_blurry": -0.026758409785932802,
+        "delta_mean_of_draws_e_set_over_sep": -0.007026702165603638,
+        "delta_legacy_energy_diagnostic": 0.006431862711906433
+      }
+    }
+  },
+  "provenance": {
+    "config": {
+      "path": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112/conway_main_ratio/config.json",
+      "sha256": "ad3c130425a68c9e3c385b7308559af3c2c5238f296feca9cb13c349eed95166"
+    },
+    "training": {
+      "path": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112/conway_main_ratio/training.json",
+      "sha256": "9e002d79d8e0e8c7a40abd1b6d84b3a10a083e6db5c9b711c7361d7a5d364a5e"
+    },
+    "evaluations": {
+      "test_steps50": {
+        "path": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112/conway_main_ratio/test_ddim50_ema_eta1_summary.json",
+        "sha256": "37c4d4353edf45c840aff61a25b4486d4117ec2af8dc3e2f3553cc78d7cd9dbe"
+      },
+      "test_steps200": {
+        "path": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112/conway_main_ratio/test_ddim200_ema_eta1_summary.json",
+        "sha256": "ad1c3189d7bedbf9e06fbe391fda98362b7aa4bc02bec9185bb9f3573914b6b5"
+      }
+    },
+    "fem": {
+      "path": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112/conway_main_ratio/fem_test200/summary.json",
+      "sha256": "fc4e8fd1ae1ca1d37e6ad7d23ae6ea0da56db31c680ec4457dfa33a7263cccd0"
+    },
+    "dataset": {
+      "path": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/isospectral_30k.npz",
+      "sha256": "083eaca4cae5acc272f1f434f5627600f03820f623cf0b683b42253e9a6edad2"
+    },
+    "fem_samples": {
+      "path": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112/conway_main_ratio/test_ddim200_ema_eta1_samples.npz",
+      "sha256": "d246f99f07767c2a3813b4c498e38996076b6063848e057cbe24c076dfb71133"
+    },
+    "collection": {
+      "root": "/Users/alyaev.roman/Desktop/PhD_Code/drums/results/isospectral_diffusion_20261112",
+      "collector": {
+        "path": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/collect_diffusion_results.py",
+        "sha256": "ae298eeb296a2a10119fdfb4831b7a52d901465b9d96d898f75f89bf1f03e1df"
+      },
+      "collected_at_utc": "2026-11-12T21:09:15.834930+00:00"
+    }
+  },
+  "energy_score_interpretation": "Legacy asymmetric-distance diagnostic; not established as a proper scoring rule",
+  "protocol": {
+    "reference_training": {
+      "n_updates": 40000,
+      "batch": 128,
+      "N_f": 256,
+      "L": 3,
+      "n_heads": 4,
+      "lr": 0.001,
+      "seed": 0,
+      "n_steps": 1000,
+      "beta_start": 0.0001,
+      "beta_end": 0.02,
+      "n_train": 27000,
+      "n_val": 1500,
+      "n_test": 1500,
+      "n_eig": 30
+    },
+    "shared_settings": {
+      "coordinate_scale": "rms",
+      "time_features": 32,
+      "ema_decay": 0.999,
+      "gaussian_skip": false,
+      "data_std": 1.0
+    },
+    "test": {
+      "n_eval": 1500,
+      "n_samples": 16,
+      "split": "test",
+      "seed": 443,
+      "sampler": "DDIM",
+      "steps": [
+        50,
+        200
+      ],
+      "eta": 1.0,
+      "weights": "EMA",
+      "sep_min": 0.1
+    },
+    "fem": {
+      "seed": 20261112,
+      "selected_dataset_ids": [
+        28577,
+        28634,
+        28643,
+        28646,
+        28648,
+        28659,
+        28680,
+        28690,
+        28705,
+        28964,
+        28975,
+        28988,
+        29007,
+        29098,
+        29102,
+        29122,
+        29132,
+        29294,
+        29397,
+        29466,
+        29519,
+        29533,
+        29628,
+        29686,
+        29689,
+        29787,
+        29808,
+        29838,
+        29947,
+        29963
+      ],
+      "draws_per_selected_row": 4,
+      "n_elements": 4000,
+      "solved_eigenvalues": 30,
+      "target_scale": 1.313789963722229
+    },
+    "dataset_sha256": "083eaca4cae5acc272f1f434f5627600f03820f623cf0b683b42253e9a6edad2",
+    "deltas": "Diffusion minus historical flow matching at the same step count",
+    "historical_dataset_provenance": "Historical FM files do not contain a dataset hash; split, separation counts and mean separation match",
+    "energy_score_interpretation": "Legacy asymmetric-distance diagnostic; not established as a proper scoring rule"
+  }
+}

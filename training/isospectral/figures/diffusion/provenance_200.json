@@ -1,0 +1,405 @@
+{
+  "rows": [
+    {
+      "label": "Conditional diffusion \u00b7 Main \u00b7 ratio \u00b7 40,000 updates\nTest \u00b7 DDIM 200 (\u03b7=1) \u00b7 EMA",
+      "source": "diffusion",
+      "summary_file": "results/isospectral_diffusion_20261112/conway_main_ratio/test_ddim200_ema_eta1_summary.json",
+      "evaluation_prefix": "test_ddim200_ema_eta1",
+      "arm": "main",
+      "features": "ratio",
+      "split": "test",
+      "sampler": "ddim",
+      "sampling_steps": 200,
+      "weights": "ema",
+      "seed": 0,
+      "completed_updates": 40000,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "error": 0.18660764396190643,
+      "sharp": 0.9876242354740061,
+      "blurry": 0.0047305045871559636,
+      "mean_set_over_sep": 0.027720198035240173,
+      "both_modes": 1.0,
+      "mean_fraction_nearer_truth": 0.5040615443425076,
+      "std_fraction_nearer_truth": 0.12996031003057015,
+      "legacy_energy_diagnostic": 0.0928204134106636
+    },
+    {
+      "label": "Conditional diffusion \u00b7 Main \u00b7 ratio white \u00b7 40,000 updates\nTest \u00b7 DDIM 200 (\u03b7=1) \u00b7 EMA",
+      "source": "diffusion",
+      "summary_file": "results/isospectral_diffusion_20261112/conway_main_ratio_white/test_ddim200_ema_eta1_summary.json",
+      "evaluation_prefix": "test_ddim200_ema_eta1",
+      "arm": "main",
+      "features": "ratio_white",
+      "split": "test",
+      "sampler": "ddim",
+      "sampling_steps": 200,
+      "weights": "ema",
+      "seed": 0,
+      "completed_updates": 40000,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "error": 0.18696419894695282,
+      "sharp": 0.9877675840978594,
+      "blurry": 0.00525611620795107,
+      "mean_set_over_sep": 0.028053447604179382,
+      "both_modes": 1.0,
+      "mean_fraction_nearer_truth": 0.5043004587155964,
+      "std_fraction_nearer_truth": 0.12931910434667052,
+      "legacy_energy_diagnostic": 0.09310561418533325
+    },
+    {
+      "label": "Conditional diffusion \u00b7 Paired \u00b7 ratio \u00b7 40,000 updates\nTest \u00b7 DDIM 200 (\u03b7=1) \u00b7 EMA",
+      "source": "diffusion",
+      "summary_file": "results/isospectral_diffusion_20261112/conway_paired_ratio/test_ddim200_ema_eta1_summary.json",
+      "evaluation_prefix": "test_ddim200_ema_eta1",
+      "arm": "paired",
+      "features": "ratio",
+      "split": "test",
+      "sampler": "ddim",
+      "sampling_steps": 200,
+      "weights": "ema",
+      "seed": 0,
+      "completed_updates": 40000,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "error": 0.18796297907829285,
+      "sharp": 0.9870030581039755,
+      "blurry": 0.005972859327217125,
+      "mean_set_over_sep": 0.028326762840151787,
+      "both_modes": 1.0,
+      "mean_fraction_nearer_truth": 0.5008600917431193,
+      "std_fraction_nearer_truth": 0.12727000721932197,
+      "legacy_energy_diagnostic": 0.0937325730919838
+    },
+    {
+      "label": "Conditional diffusion \u00b7 Paired \u00b7 ratio white \u00b7 40,000 updates\nTest \u00b7 DDIM 200 (\u03b7=1) \u00b7 EMA",
+      "source": "diffusion",
+      "summary_file": "results/isospectral_diffusion_20261112/conway_paired_ratio_white/test_ddim200_ema_eta1_summary.json",
+      "evaluation_prefix": "test_ddim200_ema_eta1",
+      "arm": "paired",
+      "features": "ratio_white",
+      "split": "test",
+      "sampler": "ddim",
+      "sampling_steps": 200,
+      "weights": "ema",
+      "seed": 0,
+      "completed_updates": 40000,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "error": 0.18774108588695526,
+      "sharp": 0.9876242354740061,
+      "blurry": 0.004873853211009175,
+      "mean_set_over_sep": 0.028311491012573242,
+      "both_modes": 1.0,
+      "mean_fraction_nearer_truth": 0.500907874617737,
+      "std_fraction_nearer_truth": 0.12688190603940433,
+      "legacy_energy_diagnostic": 0.09363049268722534
+    },
+    {
+      "label": "FM main, ratio\nhistorical, Euler 200",
+      "source": "historical",
+      "summary_file": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/summary/fm_main_ratio.json",
+      "evaluation_prefix": "fm_main_ratio",
+      "arm": "main",
+      "features": "ratio",
+      "split": "test",
+      "sampler": "Euler FM",
+      "sampling_steps": 200,
+      "weights": "raw",
+      "seed": 0,
+      "completed_updates": 40000,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "error": 0.19172558188438416,
+      "sharp": 0.969849006116208,
+      "blurry": 0.018730886850152905,
+      "mean_set_over_sep": 0.0509260818362236,
+      "both_modes": 0.9992354740061162,
+      "mean_fraction_nearer_truth": 0.5016724006116208,
+      "std_fraction_nearer_truth": 0.12533478980889104,
+      "legacy_energy_diagnostic": 0.08638855069875717
+    },
+    {
+      "label": "FM main, ratio white\nhistorical, Euler 200",
+      "source": "historical",
+      "summary_file": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/summary/fm_main_ratio_white.json",
+      "evaluation_prefix": "fm_main_ratio_white",
+      "arm": "main",
+      "features": "ratio_white",
+      "split": "test",
+      "sampler": "Euler FM",
+      "sampling_steps": 200,
+      "weights": "raw",
+      "seed": 0,
+      "completed_updates": 40000,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "error": 0.19322876632213593,
+      "sharp": 0.9739105504587156,
+      "blurry": 0.01595948012232416,
+      "mean_set_over_sep": 0.050581514835357666,
+      "both_modes": 0.9984709480122325,
+      "mean_fraction_nearer_truth": 0.49593845565749234,
+      "std_fraction_nearer_truth": 0.12434696942039651,
+      "legacy_energy_diagnostic": 0.08742771297693253
+    },
+    {
+      "label": "Regression main, squared\nhistorical, ratio",
+      "source": "historical",
+      "summary_file": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/summary/reg_main_ratio_squared.json",
+      "evaluation_prefix": "reg_main_ratio_squared",
+      "arm": "main",
+      "features": "ratio",
+      "split": "test",
+      "sampler": "regression",
+      "sampling_steps": null,
+      "weights": null,
+      "seed": 0,
+      "completed_updates": 30000,
+      "n_eval": null,
+      "n_samples": 1,
+      "error": 0.18647365272045135,
+      "sharp": 0.0,
+      "blurry": 0.9655963302752294,
+      "mean_set_over_sep": 0.4739163815975189,
+      "both_modes": null,
+      "mean_fraction_nearer_truth": null,
+      "std_fraction_nearer_truth": null,
+      "legacy_energy_diagnostic": null
+    },
+    {
+      "label": "FM paired, ratio\nhistorical, Euler 200",
+      "source": "historical",
+      "summary_file": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/summary/fm_paired_ratio.json",
+      "evaluation_prefix": "fm_paired_ratio",
+      "arm": "paired",
+      "features": "ratio",
+      "split": "test",
+      "sampler": "Euler FM",
+      "sampling_steps": 200,
+      "weights": "raw",
+      "seed": 0,
+      "completed_updates": 40000,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "error": 0.19104161858558655,
+      "sharp": 0.9730504587155964,
+      "blurry": 0.015433868501529053,
+      "mean_set_over_sep": 0.0470430888235569,
+      "both_modes": 1.0,
+      "mean_fraction_nearer_truth": 0.49928325688073394,
+      "std_fraction_nearer_truth": 0.12164392817761768,
+      "legacy_energy_diagnostic": 0.0867585837841034
+    },
+    {
+      "label": "FM paired, ratio white\nhistorical, Euler 200",
+      "source": "historical",
+      "summary_file": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/summary/fm_paired_ratio_white.json",
+      "evaluation_prefix": "fm_paired_ratio_white",
+      "arm": "paired",
+      "features": "ratio_white",
+      "split": "test",
+      "sampler": "Euler FM",
+      "sampling_steps": 200,
+      "weights": "raw",
+      "seed": 0,
+      "completed_updates": 40000,
+      "n_eval": 1500,
+      "n_samples": 16,
+      "error": 0.19223500788211823,
+      "sharp": 0.9755829510703364,
+      "blurry": 0.014382645259938837,
+      "mean_set_over_sep": 0.048545029014348984,
+      "both_modes": 0.9992354740061162,
+      "mean_fraction_nearer_truth": 0.49775420489296635,
+      "std_fraction_nearer_truth": 0.12311401141412742,
+      "legacy_energy_diagnostic": 0.08691901713609695
+    },
+    {
+      "label": "Regression paired, squared\nhistorical, ratio",
+      "source": "historical",
+      "summary_file": "/Users/alyaev.roman/Desktop/PhD_Code/drums/training/isospectral/summary/reg_paired_ratio_squared.json",
+      "evaluation_prefix": "reg_paired_ratio_squared",
+      "arm": "paired",
+      "features": "ratio",
+      "split": "test",
+      "sampler": "regression",
+      "sampling_steps": null,
+      "weights": null,
+      "seed": 0,
+      "completed_updates": 30000,
+      "n_eval": null,
+      "n_samples": 1,
+      "error": 0.18567845225334167,
+      "sharp": 0.0,
+      "blurry": 0.9915902140672783,
+      "mean_set_over_sep": 0.4866190254688263,
+      "both_modes": null,
+      "mean_fraction_nearer_truth": null,
+      "std_fraction_nearer_truth": null,
+      "legacy_energy_diagnostic": null
+    }
+  ],
+  "examples": [
+    {
+      "run": "results/isospectral_diffusion_20261112/conway_main_ratio",
+      "evaluation_prefix": "test_ddim200_ema_eta1",
+      "eligibility_threshold": 0.1,
+      "eligible_spectrum_count": 1308,
+      "evaluation_spectrum_count": 1500,
+      "rank_population": "eligible evaluation pairs",
+      "local_evaluation_indices": [
+        391,
+        428,
+        811
+      ],
+      "descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "global_dataset_indices": [
+        28891,
+        28928,
+        29311
+      ],
+      "eligible_descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "all_evaluation_descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "displayed_draw_indices": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "run": "results/isospectral_diffusion_20261112/conway_main_ratio_white",
+      "evaluation_prefix": "test_ddim200_ema_eta1",
+      "eligibility_threshold": 0.1,
+      "eligible_spectrum_count": 1308,
+      "evaluation_spectrum_count": 1500,
+      "rank_population": "eligible evaluation pairs",
+      "local_evaluation_indices": [
+        391,
+        428,
+        811
+      ],
+      "descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "global_dataset_indices": [
+        28891,
+        28928,
+        29311
+      ],
+      "eligible_descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "all_evaluation_descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "displayed_draw_indices": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "run": "results/isospectral_diffusion_20261112/conway_paired_ratio",
+      "evaluation_prefix": "test_ddim200_ema_eta1",
+      "eligibility_threshold": 0.1,
+      "eligible_spectrum_count": 1308,
+      "evaluation_spectrum_count": 1500,
+      "rank_population": "eligible evaluation pairs",
+      "local_evaluation_indices": [
+        391,
+        428,
+        811
+      ],
+      "descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "global_dataset_indices": [
+        28891,
+        28928,
+        29311
+      ],
+      "eligible_descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "all_evaluation_descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "displayed_draw_indices": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "run": "results/isospectral_diffusion_20261112/conway_paired_ratio_white",
+      "evaluation_prefix": "test_ddim200_ema_eta1",
+      "eligibility_threshold": 0.1,
+      "eligible_spectrum_count": 1308,
+      "evaluation_spectrum_count": 1500,
+      "rank_population": "eligible evaluation pairs",
+      "local_evaluation_indices": [
+        391,
+        428,
+        811
+      ],
+      "descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "global_dataset_indices": [
+        28891,
+        28928,
+        29311
+      ],
+      "eligible_descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "all_evaluation_descending_separation_ranks": [
+        131,
+        654,
+        1176
+      ],
+      "displayed_draw_indices": [
+        0,
+        1,
+        2,
+        3
+      ]
+    }
+  ],
+  "historical_fm_sampling_steps": 200,
+  "historical_baselines": "Committed single-seed FM/regression summaries; no regenerated baseline samples",
+  "legacy_energy": "Asymmetric-distance diagnostic, not an established proper scoring rule"
+}
