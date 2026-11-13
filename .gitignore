@@ -8,3 +8,4 @@ build/
 task_*.md
 /*.ipynb
 results/
+.DS_Store
