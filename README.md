@@ -1,170 +1,77 @@
-Can One Hear the Shape of a Drum?
+# Can One Hear the Shape of a Drum?
 
-A tutorial on inverse problems: restoring the shape of a 2D drum from its spectrum.
+Inverse problems: recovering a planar drum's shape from its Laplacian spectrum.
+The project compares regression, flow matching, diffusion and classifier-free
+guidance (CFG), including Conway pairs with two known isospectral solutions.
 
 ## Installation
 
-Clone the repository and install it from the clone in editable mode, so that
-changes to the source are picked up without reinstalling:
+From the repository root:
 
 ```bash
-git clone https://github.com/VLSF/drums.git
-cd drums
 pip install -e .
 ```
 
-Use `pip install .` instead for a regular (non-editable) install. In a running
-Python session or notebook, restart the kernel (or reload the module) after
-editing the source.
+Dependencies are listed in [pyproject.toml](pyproject.toml).
+For the local Apple GPU environment, see [requirements-metal.txt](requirements-metal.txt).
 
-## Dependencies
+## Reports
 
-Python >= 3.9 and the following packages (installed automatically):
+- [Regression and flow matching on isospectral drums](training/isospectral/isospectral_dataset_experiments.md)
+- [Conditional diffusion](training/isospectral/diffusion_dataset_experiments.md)
+- [Diffusion with CFG](training/isospectral/cfg_diffusion_experiments.md)
+- [Triangle regression](training/regression/triangle_dataset_experiments.md)
+- [Triangle classification](training/classification/triangle_dataset_experiments.md)
 
-- `numpy`
-- `scipy`
-- `jax`
-- `triangle` (Python wrapper for the Triangle mesh generator)
-- `equinox` (neural networks in JAX)
-- `optax` (optimisers, used in the model tests)
+Reports contain the results, figures, experiment settings and reproduction commands.
 
-## Project structure
+## Code
 
-```
-.
-├── pyproject.toml            # package metadata and dependencies
-├── README.md
-├── training/
-│   ├── classification/
-│   │   ├── ring_transformer_classifier.py      # classify (drum, spectrum) pairs with the RingTransformer
-│   │   ├── invariant_features_classifier.py    # the same with invariant distances to learned drums
-│   │   ├── predicted_drums_classifier.py       # end-to-end: distances to drums predicted from the spectrum
-│   │   └── triangle_dataset_experiments.md     # comparison of the two classifiers
-│   ├── isospectral/
-│   │   ├── generate_data.py    # 30k drums of the isospectral_drums dataset, in parallel
-│   │   ├── baselines.py        # oracle nearest shape and spectral kNN
-│   │   ├── regression.py       # DrumTransformer regression (relative or squared aligned loss)
-│   │   ├── fm.py               # flow matching with the RingTransformer, draws scored against the twin
-│   │   ├── metrics.py          # distances to the isospectral twin: sharp / blurry / pick
-│   │   ├── common.py           # alignment, Procrustes mean, input features, training loop
-│   │   ├── make_single_domain.py  # control without ambiguity: canonical drum as the label
-│   │   └── isospectral_dataset_experiments.md  # report: regression blurs, flow matching does not
-│   └── regression/
-│       ├── align_loss.py       # example training run, loss with aligned and augmented targets
-│       ├── procrustes_loss.py  # example training run, Procrustes loss
-│       ├── procrustes_all_orderings.py  # Procrustes loss over all vertex orderings, best schedule
-│       └── triangle_dataset_experiments.md  # report on the triangle dataset experiments
-└── src/
-    └── drums/
-        ├── data/
-        │   ├── spectrum.py       # FEM solver: drum shape -> Laplacian eigenvalues
-        │   ├── preprocessing.py  # align (standardise shape) and augment (vertex orderings)
-        │   ├── discretization.md # how the finite-element discretization works
-        │   ├── triangle_drums.py # random triangular drums dataset (perimeters and spectra)
-        │   ├── quadrilateral_drums.py  # random convex / non-convex quadrilateral drums datasets
-        │   ├── gww_drums.py      # perturbed isospectral Gordon-Webb-Wolpert drums dataset
-        │   ├── isospectral_drums.py  # exactly isospectral pairs of drums built from a random triangle
-        │   └── datasets_collection.py  # script that collects the named datasets and saves them
-        └── models/
-            ├── transformer.py    # DrumTransformer: eigenvalues -> vertices of a drum
-            ├── ring_transformer.py  # RingTransformer: invariant/equivariant transformer on closed polygons
-            └── ring_transformer.md  # description of the RingTransformer architecture
+| Location | Purpose |
+|---|---|
+| `src/drums/data/` | Dataset generation and the forward FEM solver |
+| `src/drums/models/` | Model definitions, losses and samplers |
+| `training/isospectral/` | Conway training, inference and evaluation |
+| `training/regression/`, `training/classification/` | Other training experiments |
+| `notebooks/` | Exploratory analysis |
+
+[src/drums/models/diffusion.py](src/drums/models/diffusion.py) implements diffusion;
+[training/isospectral/diffusion.py](training/isospectral/diffusion.py) runs it on Conway data.
+See also the [RingTransformer architecture](src/drums/models/ring_transformer.md)
+and [FEM discretization](src/drums/data/discretization.md).
+
+## Conway diffusion / CFG
+
+Generate the dataset:
+
+```bash
+python training/isospectral/generate_data.py \
+  --n 30000 --seed 2026 --workers 6 \
+  --out training/isospectral/isospectral_30k.npz
 ```
 
-`get_drum_spectrum(drum_perimeter, N_eig, a)` meshes the polygon given by its
-vertices, assembles the P1 finite-element stiffness and mass matrices, and returns
-the lowest Dirichlet eigenvalues and eigenfunctions together with the mesh.
+Train a joint conditional/unconditional model in a new output directory:
 
-`align` shifts and rotates a drum so that the mean vertex is at the origin and the
-first longest vertex points up; `augment` returns all cyclic permutations of the
-vertex sequence and of its reverse.
+```bash
+python training/isospectral/diffusion.py \
+  --data training/isospectral/isospectral_30k.npz --out results/cfg_main_ratio \
+  --features ratio --coordinate-scale rms --time-features 32 --ema-decay 0.999 \
+  --condition-presence --cond-drop-prob 0.1 --train-only
+```
 
-Running `python src/drums/data/spectrum.py` checks the solver against the exact
-spectra of a unit square and a 2x1 rectangle. Running
-`python src/drums/data/preprocessing.py` tests `align` and `augment` and checks that
-the spectrum is unchanged by shifts, rotations and cyclic reorderings.
+Defaults are 40,000 updates, width 256, three layers and batch size 128.
+Omit the two conditioning flags for conditional-only training.
+Use `--stop-after` and `--resume` for staged training, as shown in the CFG report.
 
-The named datasets below are collected with `python src/drums/data/datasets_collection.py <name> <folder>`,
-which saves `<name>.npz` in `<folder>`. The number of drums is set with `--N_samples` (1000 by default).
+Sample and evaluate on validation data before choosing guidance:
 
-`generate_triangle_drums(n_samples, seed, N_eig, ...)` returns a dictionary with the
-vertices (`perimeters`) and the lowest `N_eig` Dirichlet eigenvalues (`spectra`) of random
-triangles whose angles are all at least 30 degrees. The mesh is scaled with the area of each
-triangle. With `return_all=True` the dictionary also holds, as lists with one entry per drum, the
-`eigenfunctions`, `triangulations` and `coordinates` of the meshes. Running `python src/drums/data/triangle_drums.py` tests the generator and the
-solver on a right isosceles triangle with known spectrum.
+```bash
+python training/isospectral/diffusion.py --out results/cfg_main_ratio \
+  --eval-only --eval-split validation --n-eval 200 --weights ema \
+  --sampler ddim --sampling-steps 200 --eta 1 --guidance-scale 1.25
+```
 
-`generate_quadrilateral_drums(n_samples, seed, N_eig, nonconvex_fraction, ...)` is the analogue
-for quadrilaterals, with `perimeters` of shape `(n_samples, 4, 2)` and an extra boolean `is_convex`.
-With `nonconvex_fraction=0` all drums are convex, with `0.5` each drum is non-convex with
-probability one half. Four random points give either a convex quadrilateral (their hull) or a
-non-convex one with one reflex vertex, and samples with an angle below 30 degrees or above 330 degrees,
-a very short edge, or a vertex within 0.1 rad of straight are rejected, so the two classes are separated.
-The named datasets `convex_quadrilateral_drums` and `mixed_quadrilateral_drums` are in
-`drums.data.datasets_collection`. Running `python src/drums/data/quadrilateral_drums.py` tests the
-samplers, the symmetries of the spectrum and the mesh convergence on non-convex drums.
-
-`generate_gww_drums(n_samples, seed, N_eig, delta, ...)` returns a dataset based on the two isospectral
-drums of Gordon, Webb and Wolpert (9 vertices each). Every drum is one of the two with probability one half
-(`domain` is 0 or 1), and each coordinate of its vertices is shifted by independent uniform noise from
-`[-delta, delta]`, `0 < delta < 0.5`; the noise is drawn again if the boundary would intersect itself. The drum is
-then centred, rotated at random and its first vertex is chosen at random. `perimeters` has shape `(n_samples, 9, 2)`. The named
-dataset is `gww_drums` (`delta=0.1`) in `drums.data.datasets_collection`. Running `python src/drums/data/gww_drums.py`
-checks that the two noise-free drums are isospectral, the samplers and the mesh convergence.
-
-`generate_isospectral_drums(n_samples, seed, N_eig, r_min, r_max, angle_min, ...)` returns a dataset in which every
-spectrum belongs to two different drums exactly. A random triangle is drawn (as in `triangle_drums`), seven copies of it,
-any two neighbours being mirror images in their common edge, are glued into the two 9-gons of the pair 7_3 of
-Buser, Conway, Doyle and Semmler, "Some planar isospectral domains" (arXiv:1005.1839); for the right isosceles triangle
-this is the Gordon-Webb-Wolpert pair. The two polygons are isospectral for every triangle (up to the discretization
-error), and the sample is one of them with probability one half (`domain` is 0 or 1). Besides `perimeters` and `spectra` the
-dataset has `twin_perimeters`, the vertices of the other drum with the same spectrum, and `triangle`, the labelled triangle the
-pair is built from. The corners of the triangle are labelled at random, and relabelling two of them exchanges the names of the two
-polygons, so `domain` does not determine the drum from the spectrum; with `canonical_labelling=True` the corners are relabelled so
-that `domain` 0 is always the canonical drum of the pair (a continuous function of the spectrum). Triangles for which a polygon would
-intersect itself (about 10%) are rejected. The named dataset is `isospectral_drums` in `drums.data.datasets_collection` (generated with `canonical_labelling=True`).
-Running `python src/drums/data/isospectral_drums.py` checks the construction against GWW, the isospectrality of random
-pairs, and that the labelling of the triangle corners matters.
-
-`drums.models.transformer.DrumTransformer(N_v, N_f, N_eig, key, L, n_heads=4, mlp_ratio=4, n_drums=1)`
-maps the (normalised) eigenvalues of one drum to its `N_v` vertices. The spectrum is
-projected to one token, joined with `N_v` learnable vertex tokens, and processed by `L`
-pre-norm transformer blocks; a linear decoder turns the vertex tokens into coordinates.
-With `n_drums=K` the decoder gives `2 K` numbers per vertex, i.e. `K` drums at once, as an array
-of shape `(N_v, 2 K)`.
-Use `jax.vmap` for batches. `python src/drums/models/transformer.py` runs its tests.
-
-The scripts in `training/regression/` are examples of training the transformer on the
-triangle drums dataset (see `drums.data.datasets_collection`), e.g.
-`python training/regression/align_loss.py --data triangle_drums.npz --out results`.
-They additionally need `matplotlib`.
-The results of the experiments, including the comparison of the losses, are in
-`training/regression/triangle_dataset_experiments.md`.
-
-`notebooks/flow_matching.ipynb` compares conditional flow matching with that baseline.
-To train with a RingTransformer velocity predictor, call
-`drums.models.flow_matching.main(seed=17, canonical=False, predictor="ring")`.
-It returns `(model, history, spectra, vertices)`. Ring training randomly rotates,
-reflects and reorders targets, preserving their shape and scale without canonicalisation.
-
-`training/regression/aligned_flow_experiment.py` defaults to 20k aligned FM updates
-(checkpoints: 5k/10k/20k) and full-dataset inference (Euler/50, 32 draws per drum).
-`--features log_ratios` uses `log(lambda_1)` and `log(lambda_k/lambda_1)` (k=2..30),
-standardized on train. Results and feature comparisons are in
-`notebooks/FM_more_epochs_stats.ipynb`.
-
-`drums.models.ring_transformer.RingTransformer(n, m, N_f, N_inv, key, L, n_heads=4, mlp_ratio=4)`
-takes a closed polygon `X` of `n` vertices in the plane and a context vector `c` of length `m`.
-Its forward pass `model(c, X)` returns an invariant vector (invariant to rotations, reflections,
-translations and cyclic shifts of the vertices) and `n` corrections that are equivariant to the
-same transformations. `model.forward_flip(c, X)` makes both symmetric also under reversion of
-the vertex order. `python src/drums/models/ring_transformer.py` runs the symmetry tests.
-The architecture is described in `src/drums/models/ring_transformer.md`.
-
-`training/classification/` contains two examples that classify pairs (drum shape, spectrum) as
-matching or non-matching, with the ring transformer, with invariant features of the drum, and with
-distances to drums predicted from the spectrum (trained end-to-end).
-They are run in the same way, e.g.
-`python training/classification/ring_transformer_classifier.py --data triangle_drums.npz`.
-The comparison of the two approaches is in
-`training/classification/triangle_dataset_experiments.md`.
+For the final test evaluation, use `--eval-split test --n-eval 1500`.
+With a jointly trained checkpoint, `--guidance-scale 0` samples the prior,
+`1` uses ordinary conditioning, and values above `1` apply CFG with two predictor
+calls per step. Saved outputs include samples, metrics and sampler settings.
