@@ -4,6 +4,9 @@ Train a first model with:
     python -m drums.models.diffusion --data triangle_drums.npz --out results/diffusion
 """
 
+import math
+from numbers import Real
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -15,6 +18,26 @@ from drums.models.ring_transformer import RingTransformer
 def center(x):
     """Center one polygon (N, 2) or a batch (B, N, 2)."""
     return x - x.mean(axis=-2, keepdims=True)
+
+
+def condition_context(spectrum, present):
+    """Mask spectra and append a 0/1 presence bit; zero features alone are ambiguous."""
+    spectrum = jnp.asarray(spectrum)
+    present = jnp.broadcast_to(jnp.asarray(present, dtype=spectrum.dtype), spectrum.shape[:-1])
+    return jnp.concatenate([spectrum * present[..., None], present[..., None]], axis=-1)
+
+
+def _require_legacy_condition(condition_present):
+    """Reject null conditioning for models never given a null-condition input."""
+    try:
+        present = float(condition_present)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            "Legacy models require the static condition_present=1.; "
+            "null conditioning requires condition_presence=True"
+        ) from error
+    if present != 1.:
+        raise ValueError("Null conditioning requires condition_presence=True")
 
 
 class DiffusionSchedule(eqx.Module):
@@ -63,6 +86,7 @@ class DrumRingTransformerNoise(eqx.Module):
     time_features: int = eqx.field(static=True)
     gaussian_skip: bool = eqx.field(static=True)
     data_std: float = eqx.field(static=True)
+    condition_presence: bool = eqx.field(static=True)
 
     def __init__(
         self,
@@ -75,6 +99,7 @@ class DrumRingTransformerNoise(eqx.Module):
         time_features=0,
         gaussian_skip=False,
         data_std=1.0,
+        condition_presence=False,
     ):
         if time_features < 0 or time_features % 2:
             raise ValueError("time_features must be a nonnegative even integer")
@@ -82,12 +107,13 @@ class DrumRingTransformerNoise(eqx.Module):
         self.time_features = time_features
         self.gaussian_skip = gaussian_skip
         self.data_std = float(data_std)
+        self.condition_presence = bool(condition_presence)
         if not 0 < self.data_std < float("inf"):
             raise ValueError("data_std must be finite and positive")
 
         self.ring = RingTransformer(
             n=n_vertices,
-            m=n_eig + 1 + time_features,
+            m=n_eig + 1 + time_features + int(self.condition_presence),
             N_f=N_f,
             N_inv=1,
             key=key,
@@ -103,7 +129,7 @@ class DrumRingTransformerNoise(eqx.Module):
                  jnp.zeros_like(self.ring.equivariant_out.bias)),
             )
 
-    def __call__(self, time, x_t, spectrum):
+    def __call__(self, time, x_t, spectrum, condition_present=1.):
         """Return the raw centered output (a residual when gaussian_skip is enabled)."""
         time_context = jnp.atleast_1d(time)
         if self.time_features:
@@ -111,33 +137,68 @@ class DrumRingTransformerNoise(eqx.Module):
             frequencies = jnp.exp(-jnp.log(10000.) * jnp.arange(half) / half)
             phases = 1000. * time * frequencies
             time_context = jnp.concatenate([time_context, jnp.cos(phases), jnp.sin(phases)])
+        if self.condition_presence:
+            spectrum_context = condition_context(spectrum, condition_present)
+        else:
+            _require_legacy_condition(condition_present)
+            spectrum_context = spectrum
         context = jnp.concatenate([
             time_context,
-            spectrum,
+            spectrum_context,
         ])
 
         _, predicted_noise = self.ring.forward_flip(context, x_t)
         return center(predicted_noise)
 
 
-def predict_noise(model, x_t, spectrum, step, schedule):
+def predict_noise(model, x_t, spectrum, step, schedule, condition_present=1.):
     """Convert a raw model output to epsilon, optionally using VP Gaussian preconditioning.
 
     This adapts the EDM preconditioning idea to the existing VP epsilon target;
     neither the Gaussian corruption kernel nor the noise-MSE objective changes.
     """
     time = jnp.asarray(step, dtype=x_t.dtype) / schedule.n_steps
+    presence_enabled = getattr(model, "condition_presence", False)
+    if not presence_enabled:
+        _require_legacy_condition(condition_present)
+    conditioning = {"condition_present": condition_present} if presence_enabled else {}
     if not getattr(model, "gaussian_skip", False):
-        return model(time, x_t, spectrum)
+        return model(time, x_t, spectrum, **conditioning)
     x_t = center(x_t)
     alpha_bar = schedule.alpha_bar[step]
     signal, noise = jnp.sqrt(alpha_bar), jnp.sqrt(1.0 - alpha_bar)
     variance = alpha_bar * model.data_std**2 + (1.0 - alpha_bar)
-    residual = model(time, x_t / jnp.sqrt(variance), spectrum)
+    residual = model(time, x_t / jnp.sqrt(variance), spectrum, **conditioning)
     return center(
         noise / variance * x_t
         + signal * model.data_std / jnp.sqrt(variance) * residual
     )
+
+
+def guided_noise(model, x_t, spectrum, step, schedule, guidance_scale=1., condition_present=1.):
+    """Classifier-free epsilon prediction: eps_u + g * (eps_c - eps_u).
+
+    Static g=0/1 selects one null/conditional prediction; other scales mix two.
+    """
+    try:
+        scale = float(guidance_scale)
+    except (TypeError, ValueError) as error:
+        raise ValueError("guidance_scale must be a finite static scalar") from error
+    if not math.isfinite(scale):
+        raise ValueError("guidance_scale must be finite")
+    if not getattr(model, "condition_presence", False):
+        _require_legacy_condition(condition_present)
+        if scale != 1.:
+            raise ValueError("Classifier-free guidance requires condition_presence=True")
+    if scale == 0. or (isinstance(condition_present, Real) and condition_present == 0.):
+        return predict_noise(model, x_t, spectrum, step, schedule, condition_present=0.)
+    if scale == 1.:
+        return predict_noise(model, x_t, spectrum, step, schedule, condition_present=condition_present)
+    unconditional = predict_noise(model, x_t, spectrum, step, schedule, condition_present=0.)
+    conditional = predict_noise(
+        model, x_t, spectrum, step, schedule, condition_present=condition_present,
+    )
+    return center(unconditional + scale * (conditional - unconditional))
 
 
 def q_sample(vertices, step, schedule, key):
@@ -152,8 +213,20 @@ def q_sample(vertices, step, schedule, key):
     return x_t, noise
 
 
-def diffusion_loss(model, spectra, vertices, key, schedule):
-    """Noise MSE for spectra (B, n_eig) and vertices (B, n_vertices, 2)."""
+def diffusion_loss(model, spectra, vertices, key, schedule, cond_drop_prob=0., condition_present=None):
+    """Noise MSE with independent per-example conditioning dropout.
+
+    A scalar or (B,) condition_present overrides dropout for loss diagnostics.
+    """
+    probability = float(cond_drop_prob)
+    if not math.isfinite(probability) or not 0. <= probability <= 1.:
+        raise ValueError("cond_drop_prob must be in [0, 1]")
+    presence_enabled = getattr(model, "condition_presence", False)
+    if not presence_enabled:
+        if probability != 0.:
+            raise ValueError("Condition dropout requires condition_presence=True")
+        if condition_present is not None:
+            _require_legacy_condition(condition_present)
     time_key, noise_key = jr.split(key)
     batch_size = vertices.shape[0]
 
@@ -171,16 +244,30 @@ def diffusion_loss(model, spectra, vertices, key, schedule):
         in_axes=(0, 0, None, 0),
     )(vertices, steps, schedule, noise_keys)
 
-    predicted_noise = jax.vmap(predict_noise, in_axes=(None, 0, 0, 0, None))(
-        model, x_t, spectra, steps, schedule,
-    )
+    if presence_enabled:
+        if condition_present is not None:
+            present = jnp.broadcast_to(jnp.asarray(condition_present), (batch_size,))
+        elif probability == 0.:
+            present = jnp.ones((batch_size,), dtype=vertices.dtype)
+        else:
+            dropout_key = jr.fold_in(key, 0x434647)  # Keep corruption/time keys unchanged.
+            present = jr.bernoulli(dropout_key, 1. - probability, (batch_size,))
+        predicted_noise = jax.vmap(predict_noise, in_axes=(None, 0, 0, 0, None, 0))(
+            model, x_t, spectra, steps, schedule, present,
+        )
+    else:
+        predicted_noise = jax.vmap(predict_noise, in_axes=(None, 0, 0, 0, None))(
+            model, x_t, spectra, steps, schedule,
+        )
 
     return jnp.mean((predicted_noise - noise)**2)
 
 
-def reverse_step(model, x_t, spectrum, step, schedule, key):
+def reverse_step(model, x_t, spectrum, step, schedule, key, guidance_scale=1., condition_present=1.):
     """One DDPM update from step to step-1, for an integer step in 1..T."""
-    predicted_noise = predict_noise(model, x_t, spectrum, step, schedule)
+    predicted_noise = guided_noise(
+        model, x_t, spectrum, step, schedule, guidance_scale, condition_present,
+    )
 
     mean = (
         x_t
@@ -203,7 +290,7 @@ def reverse_step(model, x_t, spectrum, step, schedule, key):
 
 
 @eqx.filter_jit
-def sample(model, spectrum, key, schedule):
+def sample(model, spectrum, key, schedule, guidance_scale=1., condition_present=1.):
     """Generate one drum using every reverse diffusion step."""
     init_key, loop_key = jr.split(key)
 
@@ -227,6 +314,8 @@ def sample(model, spectrum, key, schedule):
             step,
             schedule,
             step_key,
+            guidance_scale,
+            condition_present,
         )
 
         return x_prev, key
@@ -241,11 +330,14 @@ def sample(model, spectrum, key, schedule):
     return x_0
 
 
-def ddim_step(model, x_t, spectrum, step, previous_step, schedule, key, eta=0.0):
+def ddim_step(model, x_t, spectrum, step, previous_step, schedule, key, eta=0.0,
+              guidance_scale=1., condition_present=1.):
     """A respaced DDIM update using the original training schedule (Song et al., 2020)."""
     alpha_bar = schedule.alpha_bar[step]
     previous_alpha_bar = schedule.alpha_bar[previous_step]
-    noise_prediction = predict_noise(model, x_t, spectrum, step, schedule)
+    noise_prediction = guided_noise(
+        model, x_t, spectrum, step, schedule, guidance_scale, condition_present,
+    )
     clean_prediction = (
         x_t - jnp.sqrt(1.0 - alpha_bar) * noise_prediction
     ) / jnp.sqrt(alpha_bar)
@@ -261,7 +353,8 @@ def ddim_step(model, x_t, spectrum, step, previous_step, schedule, key, eta=0.0)
 
 
 @eqx.filter_jit
-def sample_ddim(model, spectrum, key, schedule, n_steps=200, eta=0.0):
+def sample_ddim(model, spectrum, key, schedule, n_steps=200, eta=0.0,
+                guidance_scale=1., condition_present=1.):
     """Sample on a respaced grid; eta=0 is deterministic given the initial noise."""
     if not 1 <= n_steps <= schedule.n_steps or not 0 <= eta <= 1:
         raise ValueError("Require 1 <= sampling steps <= training steps and 0 <= eta <= 1")
@@ -275,6 +368,7 @@ def sample_ddim(model, spectrum, key, schedule, n_steps=200, eta=0.0):
         j = n_steps - i
         x_previous = ddim_step(
             model, x_t, spectrum, grid[j], grid[j - 1], schedule, step_key, eta,
+            guidance_scale, condition_present,
         )
         return x_previous, key
 
@@ -339,6 +433,7 @@ def main(
     n_steps=1000, N_f=128, L=3, n_heads=4, learning_rate=1e-3,
     eval_every=500, features="log_ratios", train_fraction=0.9, out=None,
     time_features=0, coordinate_scale="max", train_chunk=100, gaussian_skip=False,
+    condition_presence=False, cond_drop_prob=0.,
 ):
     """Train a conditional DDPM; return model, history, spectra, vertices, schedule.
 
@@ -353,6 +448,10 @@ def main(
 
     if min(n_updates, batch_size, eval_every, train_chunk) < 1 or learning_rate <= 0:
         raise ValueError("Updates, batch size, evaluation interval and learning rate must be positive")
+    if not math.isfinite(cond_drop_prob) or not 0. <= cond_drop_prob <= 1.:
+        raise ValueError("cond_drop_prob must be in [0, 1]")
+    if not condition_presence and cond_drop_prob != 0.:
+        raise ValueError("Condition dropout requires --condition-presence")
     spectra, vertices, preprocessing = prepare_data(data, train_fraction, features, coordinate_scale)
     n_train = preprocessing["n_train"]
     data_std = float(jnp.sqrt(
@@ -365,6 +464,7 @@ def main(
         init_key, n_vertices=vertices.shape[1], n_eig=spectra.shape[1],
         N_f=N_f, L=L, n_heads=n_heads, time_features=time_features,
         gaussian_skip=gaussian_skip, data_std=data_std,
+        condition_presence=condition_presence,
     )
 
     config = dict(
@@ -374,6 +474,7 @@ def main(
         N_f=N_f, L=L, n_heads=n_heads, time_features=time_features, learning_rate=learning_rate,
         features=features, coordinate_scale=coordinate_scale, train_chunk=train_chunk,
         gaussian_skip=gaussian_skip, data_std=data_std,
+        condition_presence=condition_presence, cond_drop_prob=cond_drop_prob,
         train_fraction=train_fraction, n_train=n_train,
         n_validation=len(vertices) - n_train, jax=jax.__version__,
         equinox=eqx.__version__, optax=optax.__version__,
@@ -401,7 +502,7 @@ def main(
     @eqx.filter_jit
     def train_step(model, state, spectra, vertices, key):
         loss, grads = eqx.filter_value_and_grad(diffusion_loss)(
-            model, spectra, vertices, key, schedule,
+            model, spectra, vertices, key, schedule, cond_drop_prob=cond_drop_prob,
         )
         updates, state = optimizer.update(grads, state, eqx.filter(model, eqx.is_array))
         return eqx.apply_updates(model, updates), state, loss
@@ -421,6 +522,7 @@ def main(
     validation_loss = eqx.filter_jit(diffusion_loss)
     validation_key = jr.PRNGKey(123)
     history, validation_steps, validation_history = [], [], []
+    unconditional_history = []
     completed = 0
     while completed < n_updates:
         count = min(train_chunk, n_updates - completed, eval_every - completed % eval_every)
@@ -440,12 +542,32 @@ def main(
                 raise FloatingPointError(f"Nonfinite validation loss at update {completed}")
             validation_steps.append(completed)
             validation_history.append(val)
-            print(f"{completed}: train={float(losses.mean()):.4f}, validation={val:.4f}", flush=True)
+            if condition_presence:
+                unconditional = float(validation_loss(
+                    model, spectra[n_train:], vertices[n_train:], validation_key,
+                    schedule, condition_present=0.,
+                ))
+                if not np.isfinite(unconditional):
+                    raise FloatingPointError(f"Nonfinite unconditional validation loss at update {completed}")
+                unconditional_history.append(unconditional)
+                print(
+                    f"{completed}: train={float(losses.mean()):.4f}, "
+                    f"validation_conditional={val:.4f}, validation_unconditional={unconditional:.4f}",
+                    flush=True,
+                )
+            else:
+                print(f"{completed}: train={float(losses.mean()):.4f}, validation={val:.4f}", flush=True)
 
     if out is not None:
         eqx.tree_serialise_leaves(out / "model.eqx", model)
+        validation_values = dict(validation_loss=validation_history)
+        if condition_presence:
+            validation_values.update(
+                validation_conditional_loss=validation_history,
+                validation_unconditional_loss=unconditional_history,
+            )
         np.savez(out / "history.npz", train_loss=history,
-                 validation_steps=validation_steps, validation_loss=validation_history)
+                 validation_steps=validation_steps, **validation_values)
     return model, history, spectra, vertices, schedule
 
 
@@ -463,6 +585,7 @@ def load_checkpoint(folder):
         **{name: config[name] for name in ("n_vertices", "n_eig", "N_f", "L", "n_heads")},
         time_features=config.get("time_features", 0),
         gaussian_skip=config.get("gaussian_skip", False), data_std=config.get("data_std", 1.0),
+        condition_presence=config.get("condition_presence", False),
     )
     model = eqx.tree_deserialise_leaves(folder / "model.eqx", template)
     schedule = DiffusionSchedule(
@@ -498,4 +621,8 @@ if __name__ == "__main__":
                         help="Extra sinusoidal time features; zero keeps the original scalar-time model")
     parser.add_argument("--gaussian-skip", action="store_true",
                         help="Predict epsilon using a train-fitted Gaussian skip and learned ring residual")
+    parser.add_argument("--condition-presence", action="store_true",
+                        help="Append an explicit spectrum-presence flag for joint conditional/null training")
+    parser.add_argument("--cond-drop-prob", type=float, default=0.,
+                        help="Independent per-example probability of removing spectrum conditioning")
     main(**vars(parser.parse_args()))

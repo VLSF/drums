@@ -8,6 +8,7 @@ Only generated shapes enter the Procrustes mean; targets enter evaluation only.
 """
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import time
@@ -72,17 +73,35 @@ def summary_stats(errors):
 
 
 @eqx.filter_jit
-def sample_batch(model, spectra, keys, schedule, sampler="ddpm", sampling_steps=200, eta=0.0):
+def sample_batch(model, spectra, keys, schedule, sampler="ddpm", sampling_steps=200, eta=0.0,
+                 guidance_scale=1., condition_present=1.):
     if sampler == "ddpm":
-        return jax.vmap(sample, in_axes=(None, 0, 0, None))(model, spectra, keys, schedule)
+        return jax.vmap(lambda spectrum, key: sample(
+            model, spectrum, key, schedule, guidance_scale=guidance_scale, condition_present=condition_present,
+        ))(spectra, keys)
     return jax.vmap(lambda spectrum, key: sample_ddim(
         model, spectrum, key, schedule, n_steps=sampling_steps, eta=eta,
+        guidance_scale=guidance_scale, condition_present=condition_present,
     ))(spectra, keys)
 
 
 def evaluate(args):
     started = time.perf_counter()
     config = json.loads((args.checkpoint / "metadata.json").read_text())
+    guidance_scale = getattr(args, "guidance_scale", 1.)
+    condition_present = getattr(args, "condition_present", 1)
+    presence_enabled = config.get("condition_presence", False)
+    if not np.isfinite(guidance_scale) or condition_present not in (0, 1):
+        raise ValueError("Guidance scale must be finite and condition_present must be 0 or 1")
+    if not presence_enabled and (guidance_scale != 1. or condition_present != 1):
+        raise ValueError("Guidance and unconditional generation require a presence-enabled checkpoint")
+    dropout = config.get("cond_drop_prob", 0.)
+    if not np.isfinite(dropout) or not 0 <= dropout <= 1:
+        raise ValueError("Checkpoint cond_drop_prob must be in [0, 1]")
+    if (condition_present == 0 or guidance_scale != 1.) and dropout <= 0:
+        raise ValueError("Unconditional sampling and CFG require a null branch trained with cond_drop_prob > 0")
+    if condition_present == 1 and guidance_scale != 0. and dropout >= 1:
+        raise ValueError("Conditional sampling and CFG require cond_drop_prob < 1")
     model, schedule, preprocessing = load_checkpoint(args.checkpoint)
     spectra, vertices, fitted = prepare_data(
         args.data, train_fraction=config["train_fraction"], features=config["features"],
@@ -122,7 +141,8 @@ def evaluate(args):
         k = np.pad(k, ((0, args.chunk_size - valid), (0, 0)), mode="edge")
         draws = sample_batch(model, jax.device_put(c, device),
                              jax.device_put(k, device), schedule,
-                             args.sampler, args.sampling_steps, args.eta)
+                             args.sampler, args.sampling_steps, args.eta,
+                             guidance_scale, condition_present)
         predictions.append(np.asarray(draws)[:valid])
         print(f"Generated {min(offset + valid, len(features))}/{len(features)} draws", flush=True)
     samples = np.concatenate(predictions).reshape(len(ids), args.n_samples, 3, 2)
@@ -134,13 +154,36 @@ def evaluate(args):
     means = np.array([mean_shape(draws) for draws in samples])
     shape_errors = np.array([relative_error(target, mean)
                              for target, mean in zip(targets, means)])
+    sampling_steps = schedule.n_steps if args.sampler == "ddpm" else args.sampling_steps
+    calls_per_step = 1 if condition_present == 0 or guidance_scale in (0., 1.) else 2
+    nfe = sampling_steps * calls_per_step
+    unconditional = condition_present == 0 or guidance_scale == 0.
+    suffix = "_g" + str(float(guidance_scale)).removesuffix(".0") if presence_enabled else ""
+    if presence_enabled and condition_present == 0:
+        suffix += "_unconditional"
+    summary_name, samples_name = f"summary{suffix}.json", f"samples{suffix}.npz"
+    root = Path(__file__).resolve().parents[2]
+    source_hashes = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in (
+        "src/drums/models/diffusion.py", "src/drums/models/ring_transformer.py", "training/diffusion/triangle.py",
+    )}
     summary = dict(
         args={name: str(value) if isinstance(value, Path) else value
               for name, value in vars(args).items()},
         checkpoint_training=config, split="held_out_validation",
         n_eval=int(len(ids)), n_samples=args.n_samples, sampler=args.sampler.upper(),
-        sampler_steps=schedule.n_steps if args.sampler == "ddpm" else args.sampling_steps,
+        sampler_steps=sampling_steps,
         eta=args.eta if args.sampler == "ddim" else None, device=str(device),
+        guidance_scale=guidance_scale, condition_present=condition_present,
+        predictor_condition_masks=([0] if unconditional else [1] if guidance_scale == 1. else [0, 1]),
+        condition_presence=presence_enabled, training_cond_drop_prob=config.get("cond_drop_prob", 0.),
+        effective_conditioning="unconditional" if unconditional else "conditional",
+        metrics_interpretation=("Unconditional prior draws paired with targets for diagnostics; not conditional reconstruction performance"
+                                if unconditional else "Conditional reconstruction metrics"),
+        predictor_evaluations_per_draw=nfe,
+        requested_predictor_evaluations=len(features) * nfe,
+        executed_predictor_evaluations=((len(features) + args.chunk_size - 1) // args.chunk_size) * args.chunk_size * nfe,
+        source_sha256=source_hashes,
+        output_files=dict(summary=summary_name, samples=samples_name),
         per_draw_error=summary_stats(errors),
         per_shape_mean_draw_error=summary_stats(errors.mean(axis=1)),
         mean_shape_error=summary_stats(shape_errors),
@@ -152,15 +195,17 @@ def evaluate(args):
         sampling_seconds=sampling_seconds, elapsed_seconds=time.perf_counter() - started,
     )
     args.out.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(args.out / "samples.npz", dataset_ids=ids, samples=samples,
+    np.savez_compressed(args.out / samples_name, dataset_ids=ids, samples=samples,
                         targets=targets, mean_shapes=means, draw_errors=errors,
-                        mean_shape_error=shape_errors, target_scale=preprocessing["target_scale"])
-    (args.out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+                        mean_shape_error=shape_errors, target_scale=preprocessing["target_scale"],
+                        guidance_scale=guidance_scale, condition_present=condition_present,
+                        condition_presence=presence_enabled, training_cond_drop_prob=config.get("cond_drop_prob", 0.))
+    (args.out / summary_name).write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary, indent=2), flush=True)
     return summary
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--data", type=Path, default=Path("triangle_drums.npz"))
@@ -172,12 +217,14 @@ def main():
     parser.add_argument("--sampler", choices=("ddpm", "ddim"), default="ddpm")
     parser.add_argument("--sampling-steps", type=int, default=200)
     parser.add_argument("--eta", type=float, default=0.0)
-    args = parser.parse_args()
+    parser.add_argument("--guidance-scale", type=float, default=1.)
+    parser.add_argument("--condition-present", type=int, choices=(0, 1), default=1)
+    args = parser.parse_args(argv)
     if min(args.n_eval, args.n_samples, args.chunk_size) < 1:
         parser.error("Evaluation counts must be positive")
     if args.sampling_steps < 1 or not 0 <= args.eta <= 1:
         parser.error("Sampling steps must be positive and eta must be in [0, 1]")
-    evaluate(args)
+    return evaluate(args)
 
 
 if __name__ == "__main__":

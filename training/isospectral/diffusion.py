@@ -13,6 +13,7 @@ scoring rule. Checkpoints include optimizer state and the random key.
 import argparse
 import hashlib
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -37,6 +38,33 @@ def sha256_file(path):
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def validate_guidance(config, guidance_scale=1., condition_present=1.):
+    if not np.isfinite(guidance_scale) or condition_present not in (0, 1):
+        raise ValueError("Guidance scale must be finite and condition_present must be 0 or 1")
+    if not config.get("condition_presence", False) and (guidance_scale != 1. or condition_present != 1):
+        raise ValueError("Guidance and unconditional generation require a presence-enabled checkpoint")
+    dropout = config.get("cond_drop_prob", 0.)
+    if not np.isfinite(dropout) or not 0 <= dropout <= 1:
+        raise ValueError("Checkpoint cond_drop_prob must be in [0, 1]")
+    if (condition_present == 0 or guidance_scale != 1.) and dropout <= 0:
+        raise ValueError("Unconditional sampling and CFG require a null branch trained with cond_drop_prob > 0")
+    if condition_present == 1 and guidance_scale != 0. and dropout >= 1:
+        raise ValueError("Conditional sampling and CFG require cond_drop_prob < 1")
+
+
+def evaluation_prefix(config, evaluation):
+    prefix = f"{evaluation['split']}_{evaluation['sampler']}{evaluation['sampling_steps']}_{evaluation['weights']}"
+    if evaluation["sampler"] == "ddim":
+        prefix += f"_eta{evaluation['eta']:g}"
+    if evaluation.get("sampling_block", 0):
+        prefix += f"_block{evaluation['sampling_block']}"
+    if config.get("condition_presence", False):
+        prefix += "_g" + str(float(evaluation.get("guidance_scale", 1.))).removesuffix(".0")
+        if evaluation.get("condition_present", 1) == 0:
+            prefix += "_unconditional"
+    return prefix
 
 
 def transform_features(log_spectra, kind, preprocessing):
@@ -112,6 +140,7 @@ def make_model(config):
         n_eig=config["n_eig"], N_f=config["N_f"], L=config["L"],
         n_heads=config["n_heads"], time_features=config.get("time_features", 0),
         gaussian_skip=config.get("gaussian_skip", False), data_std=config.get("data_std", 1.),
+        condition_presence=config.get("condition_presence", False),
     )
 
 
@@ -178,6 +207,7 @@ def train(folder, config, arrays, validation, resume=False, stop_after=None):
             indices = random.randint(batch_key, (config["batch"],), 0, len(F))
             loss, grads = eqx.filter_value_and_grad(diffusion_loss)(
                 model, F[indices], V[indices], loss_key, schedule,
+                cond_drop_prob=config.get("cond_drop_prob", 0.),
             )
             updates, state = optimizer.update(grads, state, eqx.filter(model, eqx.is_array))
             model = eqx.apply_updates(model, updates)
@@ -216,31 +246,51 @@ def train(folder, config, arrays, validation, resume=False, stop_after=None):
             if not np.isfinite(value) or not np.isfinite(ema_value):
                 raise FloatingPointError(f"Nonfinite validation loss at update {completed}")
             elapsed = previous_seconds + time.perf_counter() - started
-            validation_history.append(dict(update=completed, loss=value, ema_loss=ema_value, elapsed_seconds=elapsed))
-            print(json.dumps(dict(update=completed, train_loss=float(history[max(0, completed-500):completed].mean()),
-                                  validation_loss=value, validation_loss_ema=ema_value, elapsed_seconds=elapsed)), flush=True)
+            validation = dict(update=completed, loss=value, ema_loss=ema_value, elapsed_seconds=elapsed)
+            if config.get("condition_presence", False):
+                unconditional = float(val_loss(
+                    model, F_val, V_val, random.PRNGKey(123), schedule, condition_present=0.,
+                ))
+                unconditional_ema = (float(val_loss(
+                    ema, F_val, V_val, random.PRNGKey(123), schedule, condition_present=0.,
+                )) if config["ema_decay"] else unconditional)
+                if not np.isfinite(unconditional) or not np.isfinite(unconditional_ema):
+                    raise FloatingPointError(f"Nonfinite unconditional validation loss at update {completed}")
+                validation.update(conditional_loss=value, conditional_ema_loss=ema_value,
+                                  unconditional_loss=unconditional, unconditional_ema_loss=unconditional_ema)
+            validation_history.append(validation)
+            print(json.dumps(dict(validation, train_loss=float(history[max(0, completed-500):completed].mean()),
+                                  validation_loss=value, validation_loss_ema=ema_value)), flush=True)
         if completed % config["checkpoint_every"] == 0 or completed == target:
             save_checkpoint(folder, model, ema, state, key, completed, history)
             timing = dict(completed_updates=completed, n_train_pairs=len(F),
                           elapsed_seconds=previous_seconds + time.perf_counter() - started,
                           validation=validation_history)
             timings_file.write_text(json.dumps(timing, indent=2) + "\n")
+            diagnostics = dict(validation_loss=[x["loss"] for x in validation_history],
+                               validation_loss_ema=[x["ema_loss"] for x in validation_history])
+            if config.get("condition_presence", False):
+                diagnostics.update({f"validation_{name}": [x[name] for x in validation_history]
+                                    for name in ("conditional_loss", "conditional_ema_loss",
+                                                 "unconditional_loss", "unconditional_ema_loss")})
             np.savez(folder / "history.npz", train_loss=history[:completed],
-                     validation_steps=[x["update"] for x in validation_history],
-                     validation_loss=[x["loss"] for x in validation_history],
-                     validation_loss_ema=[x["ema_loss"] for x in validation_history])
+                     validation_steps=[x["update"] for x in validation_history], **diagnostics)
     timing["completed_updates"] = completed
     return model, ema, history, timing
 
 
 @eqx.filter_jit
-def sample_batch(model, features, keys, schedule, sampler="ddpm", sampling_steps=200, eta=0.):
+def sample_batch(model, features, keys, schedule, sampler="ddpm", sampling_steps=200, eta=0.,
+                 guidance_scale=1., condition_present=1.):
     """One independent DDPM draw per row, using the core sampler unchanged."""
     if sampler == "ddpm":
-        return vmap(lambda feature, key: sample_one(model, feature, key, schedule))(features, keys)
+        return vmap(lambda feature, key: sample_one(
+            model, feature, key, schedule, guidance_scale=guidance_scale, condition_present=condition_present,
+        ))(features, keys)
     if sampler == "ddim":
         return vmap(lambda feature, key: sample_ddim(
             model, feature, key, schedule, n_steps=sampling_steps, eta=eta,
+            guidance_scale=guidance_scale, condition_present=condition_present,
         ))(features, keys)
     raise ValueError("sampler must be ddpm or ddim")
 
@@ -256,21 +306,23 @@ def initialize_ddpm_batch(model, features, keys):
 
 
 @eqx.filter_jit
-def ddpm_block(model, x, features, keys, schedule, offset, count):
+def ddpm_block(model, x, features, keys, schedule, offset, count, guidance_scale=1., condition_present=1.):
     """Execute consecutive DDPM steps; offset is a runtime JAX scalar."""
     def body(i, carry):
         x, keys = carry
         split_keys = vmap(random.split)(keys)
         loop_keys, step_keys = split_keys[:, 0], split_keys[:, 1]
         step = schedule.n_steps - (offset + i)
-        previous = vmap(reverse_step, in_axes=(None, 0, 0, None, None, 0))(
-            model, x, features, step, schedule, step_keys,
-        )
+        previous = vmap(lambda vertices, feature, key: reverse_step(
+            model, vertices, feature, step, schedule, key,
+            guidance_scale=guidance_scale, condition_present=condition_present,
+        ))(x, features, step_keys)
         return previous, loop_keys
     return jax.lax.fori_loop(0, count, body, (x, keys))
 
 
-def sample_batch_blocked(model, features, keys, schedule, block_size=200):
+def sample_batch_blocked(model, features, keys, schedule, block_size=200,
+                         guidance_scale=1., condition_present=1.):
     """Run every DDPM step in bounded execution blocks without changing its chain."""
     if block_size < 1:
         raise ValueError("DDPM sampling block size must be positive")
@@ -279,13 +331,15 @@ def sample_batch_blocked(model, features, keys, schedule, block_size=200):
         count = min(block_size, schedule.n_steps - offset)
         # The dynamic offset lets all equal-sized blocks reuse one executable.
         offset_array = jnp.asarray(offset, dtype=jnp.int32)
-        x, loop_keys = ddpm_block(model, x, features, loop_keys, schedule, offset_array, count)
+        x, loop_keys = ddpm_block(model, x, features, loop_keys, schedule, offset_array, count,
+                                  guidance_scale, condition_present)
         jax.block_until_ready((x, loop_keys))
     return x
 
 
 def generate_samples(model, features, key, schedule, n_samples=16, chunk_size=4,
-                     sampler="ddpm", sampling_steps=200, eta=0., sampling_block=0):
+                     sampler="ddpm", sampling_steps=200, eta=0., sampling_block=0,
+                     guidance_scale=1., condition_present=1.):
     """Sample chunks of spectra, with flat batch size chunk_size * n_samples.
 
     Four spectra (64 draws by default) is a conservative Metal setting. Keys
@@ -307,9 +361,11 @@ def generate_samples(model, features, key, schedule, n_samples=16, chunk_size=4,
         keys = vmap(lambda index: random.fold_in(key, index))(indices)
         repeated, keys = jax.device_put(repeated, device), jax.device_put(keys, device)
         if sampling_block:
-            draws = np.asarray(sample_batch_blocked(model, repeated, keys, schedule, sampling_block))
+            draws = np.asarray(sample_batch_blocked(model, repeated, keys, schedule, sampling_block,
+                                                    guidance_scale, condition_present))
         else:
-            draws = np.asarray(sample_batch(model, repeated, keys, schedule, sampler, sampling_steps, eta))
+            draws = np.asarray(sample_batch(model, repeated, keys, schedule, sampler, sampling_steps, eta,
+                                            guidance_scale, condition_present))
         draws = draws.reshape(chunk_size, n_samples, N_V, 2)[:valid]
         if not np.isfinite(draws).all():
             raise FloatingPointError(f"Nonfinite generated coordinates at evaluation row {offset}")
@@ -385,9 +441,11 @@ TRAINING_KEYS = (
     "time_features",
     "coordinate_scale",
     "gaussian_skip",
+    "condition_presence", "cond_drop_prob",
 )
 EVALUATION_KEYS = ("weights", "n_samples", "n_eval", "chunk_size", "metric_chunk", "sep_min",
-                   "eval_seed", "eval_split", "sampler", "sampling_steps", "eta", "sampling_block")
+                   "eval_seed", "eval_split", "sampler", "sampling_steps", "eta", "sampling_block",
+                   "guidance_scale", "condition_present")
 
 
 def parser():
@@ -409,6 +467,10 @@ def parser():
                    help="Even sinusoidal time-embedding dimension; 0 preserves scalar conditioning")
     p.add_argument("--gaussian-skip", action="store_true",
                    help="Use the optional analytic Gaussian skip in the noise predictor")
+    p.add_argument("--condition-presence", action="store_true",
+                   help="Add the explicit condition-presence bit needed for CFG training")
+    p.add_argument("--cond-drop-prob", type=float, default=0.,
+                   help="Independent per-example conditioning dropout during training")
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--ema-decay", type=float, default=0., help="0 disables EMA; otherwise use a decay in (0, 1)")
     p.add_argument("--weights", choices=("raw", "ema"), default="raw")
@@ -417,6 +479,9 @@ def parser():
     p.add_argument("--sampling-block", type=int, default=0,
                    help="DDPM execution block size with synchronization between blocks; 0 uses the original sampler")
     p.add_argument("--eta", type=float, default=0., help="DDIM stochasticity")
+    p.add_argument("--guidance-scale", type=float, default=1., help="0: unconditional; 1: conditional; other values: CFG")
+    p.add_argument("--condition-present", type=int, choices=(0, 1), default=1,
+                   help="0 ignores the spectrum and samples the unconditional learned branch")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--n-steps", type=int, default=1000)
     p.add_argument("--beta-start", type=float, default=1e-4)
@@ -443,7 +508,9 @@ def parser():
 
 
 def main(argv=None):
-    args = parser().parse_args(argv)
+    argument_parser = parser()
+    command_line = sys.argv[1:] if argv is None else list(argv)
+    args = argument_parser.parse_args(command_line)
     config = vars(args).copy()
     folder = args.out
     config["out"] = str(folder.resolve())
@@ -459,15 +526,22 @@ def main(argv=None):
         stored = json.loads((folder / "config.json").read_text())
         if args.resume:
             # Resume uses the original training configuration, including its LR schedule.
-            # Explicit nondefault CLI conflicts are rejected; omitted flags need not be repeated.
+            # Explicit training flags are frozen, including explicitly requested defaults.
             defaults = vars(parser().parse_args(["--out", str(folder)]))
+            options = {token.split("=", 1)[0] for token in command_line}
+            explicit = {action.dest for action in argument_parser._actions
+                        if options.intersection(action.option_strings)}
             for name in TRAINING_KEYS:
-                if config[name] != defaults[name] and config[name] != stored.get(name, defaults[name]):
+                if name in explicit and config[name] != stored.get(name, defaults[name]):
                     raise ValueError(f"Cannot change {name} while resuming")
         config = stored.copy()
         config.setdefault("coordinate_scale", "max")
         config.setdefault("gaussian_skip", False)
         config.setdefault("data_std", 1.)
+        config.setdefault("condition_presence", False)
+        config.setdefault("cond_drop_prob", 0.)
+        if not args.train_only:
+            validate_guidance(config, args.guidance_scale, args.condition_present)
         config["data"] = str(args.data.resolve()) if args.data else stored["data"]
         if sha256_file(config["data"]) != stored["data_sha256"]:
             raise ValueError("Dataset does not match the checkpoint's SHA256")
@@ -480,6 +554,12 @@ def main(argv=None):
             raise ValueError("Training counts and learning rate must be positive")
         if not 0 <= args.ema_decay < 1:
             raise ValueError("EMA decay must be in [0, 1)")
+        if not np.isfinite(args.cond_drop_prob) or not 0 <= args.cond_drop_prob <= 1:
+            raise ValueError("Condition dropout probability must be in [0, 1]")
+        if args.cond_drop_prob and not args.condition_presence:
+            raise ValueError("Condition dropout requires --condition-presence")
+        if not args.train_only:
+            validate_guidance(config, args.guidance_scale, args.condition_present)
         if (folder / "config.json").exists():
             raise FileExistsError(f"Run exists; use --resume or --eval-only: {folder}")
         config["data"] = str((args.data or Path("isospectral_30k.npz")).resolve())
@@ -523,18 +603,38 @@ def main(argv=None):
     started = time.perf_counter()
     samples = generate_samples(model, F[:n], random.PRNGKey(args.eval_seed), make_schedule(config),
                                args.n_samples, args.chunk_size, args.sampler,
-                               args.sampling_steps, args.eta, args.sampling_block)
+                               args.sampling_steps, args.eta, args.sampling_block,
+                               args.guidance_scale, args.condition_present)
     sample_seconds = time.perf_counter() - started
     started = time.perf_counter()
     result, per_draw, means = score_samples(samples, V[:n], W[:n], args.sep_min, args.metric_chunk)
     metric_seconds = time.perf_counter() - started
     sampling_steps = config["n_steps"] if args.sampler == "ddpm" else args.sampling_steps
+    unconditional = args.condition_present == 0 or args.guidance_scale == 0.
+    calls_per_step = 1 if unconditional or args.guidance_scale == 1. else 2
+    nfe = sampling_steps * calls_per_step
+    root = Path(__file__).resolve().parents[2]
+    evaluation_sources = {name: sha256_file(root / name) for name in (
+        "src/drums/models/diffusion.py", "src/drums/models/ring_transformer.py", "training/isospectral/diffusion.py",
+    )}
     summary = dict(config=config, evaluation=dict(split=args.eval_split, seed=args.eval_seed,
                    n_eval=n, n_samples=args.n_samples, chunk_size=args.chunk_size,
                    weights=args.weights, sampler=args.sampler,
                    sampling_block=args.sampling_block,
                    sampling_steps=sampling_steps,
                    eta=args.eta if args.sampler == "ddim" else None,
+                   guidance_scale=args.guidance_scale, condition_present=args.condition_present,
+                   predictor_condition_masks=([0] if unconditional else [1] if args.guidance_scale == 1. else [0, 1]),
+                   condition_presence=config.get("condition_presence", False),
+                   training_cond_drop_prob=config.get("cond_drop_prob", 0.),
+                   source_sha256=evaluation_sources,
+                   effective_conditioning="unconditional" if unconditional else "conditional",
+                   predictor_evaluations_per_draw=nfe,
+                   requested_predictor_evaluations=n * args.n_samples * nfe,
+                   executed_predictor_evaluations=((n + args.chunk_size - 1) // args.chunk_size)
+                       * args.chunk_size * args.n_samples * nfe,
+                   metrics_interpretation=("Unconditional prior draws paired with targets for diagnostics; not conditional reconstruction performance"
+                                           if unconditional else "Conditional reconstruction and mode-coverage metrics"),
                    completed_updates=completed, devices=[str(device) for device in jax.devices()],
                    versions=dict(jax=jax.__version__, equinox=eqx.__version__, optax=optax.__version__)),
                    n_train_pairs=config["n_train"] * (2 if config["paired"] else 1),
@@ -542,15 +642,14 @@ def main(argv=None):
                    timing=dict(training_seconds=timing.get("elapsed_seconds"),
                                sample_seconds=sample_seconds, metric_seconds=metric_seconds),
                    **{f"{args.eval_split}_steps{sampling_steps}": result})
-    prefix = f"{args.eval_split}_{args.sampler}{sampling_steps}_{args.weights}"
-    if args.sampler == "ddim":
-        prefix += f"_eta{args.eta:g}"
-    if args.sampling_block:
-        prefix += f"_block{args.sampling_block}"
+    prefix = evaluation_prefix(config, summary["evaluation"])
     (folder / f"{prefix}_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     np.savez_compressed(folder / f"{prefix}_samples.npz", samples=samples,
                         truth=V[:n], twin=W[:n], spectra_features=F[:n],
-                        target_scale=preprocessing["target_scale"])
+                        target_scale=preprocessing["target_scale"],
+                        guidance_scale=args.guidance_scale, condition_present=args.condition_present,
+                        condition_presence=config.get("condition_presence", False),
+                        training_cond_drop_prob=config.get("cond_drop_prob", 0.))
     np.savez_compressed(folder / f"{prefix}_per_draw.npz", **per_draw)
     np.savez_compressed(folder / f"{prefix}_mean_metrics.npz", **means)
     print(json.dumps(result, indent=2), flush=True)
