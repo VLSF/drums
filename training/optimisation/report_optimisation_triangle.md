@@ -19,7 +19,7 @@ Through systematic experiments, we empirically demonstrate a fundamental mathema
 Any non-degenerate planar triangle can be represented up to rigid motion (translation and rotation) by 3 degrees of freedom. A reference canonical triangle $R$ is transformed via an upper-triangular matrix $A(p)$:
 
 $$
-A(p) = \begin{bmatrix} e^{p_0} & p_1 \\ 0 & e^{p_2} \end{bmatrix}, \quad p \in \mathbb{R}^3
+A(p) = \begin{pmatrix} e^{p_0} & p_1 \\ 0 & e^{p_2} \end{pmatrix}, \quad p \in \mathbb{R}^3
 $$
 
 Applying $A(p)$ to the vertices of $R$ scales and shears the domain while preserving orientation ($\det A(p) = e^{p_0 + p_2} > 0$).
