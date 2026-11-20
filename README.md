@@ -22,6 +22,7 @@ For the local Apple GPU environment, see [requirements-metal.txt](requirements-m
 - [Diffusion with CFG](training/isospectral/cfg_diffusion_experiments.md)
 - [Triangle regression](training/regression/triangle_dataset_experiments.md)
 - [Triangle classification](training/classification/triangle_dataset_experiments.md)
+- [Triangle shape optimization](training/optimisation/report_optimisation_triangle.md)
 
 Reports contain the results, figures, experiment settings and reproduction commands.
 
@@ -33,6 +34,7 @@ Reports contain the results, figures, experiment settings and reproduction comma
 | `src/drums/models/` | Model definitions, losses and samplers |
 | `training/isospectral/` | Conway training, inference and evaluation |
 | `training/regression/`, `training/classification/` | Other training experiments |
+| `training/optimisation/` | Direct optimization through the spectrum solver |
 | `notebooks/` | Exploratory analysis |
 
 [src/drums/models/diffusion.py](src/drums/models/diffusion.py) implements diffusion;
