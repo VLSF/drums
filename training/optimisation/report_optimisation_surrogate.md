@@ -72,13 +72,13 @@ $$
 - Optimizer: Adam ($\eta = 10^{-4}$), fully vectorized with `jax.lax.scan` on GPU.
 
 ### 2.3 Direct Inverse Shape Optimization
-Given target spectrum $\lambda^*$, we reconstruct the unknown triangle vertices $X$ by solving:
+Given target spectrum $\lambda^{\ast}$, we reconstruct the unknown triangle vertices $X$ by solving:
 
 $$
-\min_{X \in \mathbb{R}^{3 \times 2}} \mathcal{L}_{\text{shape}}(X) = \sum_{k=1}^{30} \left( \ln \lambda^*_k - \ln \hat{\lambda}_k(X; \theta^*) \right)^2
+\min_{X \in \mathbb{R}^{3 \times 2}} \mathcal{L}_{\text{shape}}(X) = \sum_{k=1}^{30} \left( \ln \lambda_k^{\ast} - \ln \hat{\lambda}_k(X; \theta^{\ast}) \right)^2
 $$
 
-where $\theta^*$ are the frozen weights of the trained surrogate.
+where $\theta^{\ast}$ are the frozen weights of the trained surrogate.
 - Optimization parameters: Adam ($\eta = 0.1$, 1,000 steps).
 - For each test drum, the initial drum $X_0$ is initialized as a randomly chosen drum from the training set.
 

@@ -43,10 +43,10 @@ $$
 Since all operations (local element matrices, global assembly, Cholesky factorization, triangular solve, and symmetric eigenvalue decomposition) are implemented in JAX, the loss function is fully differentiable end-to-end via automatic differentiation (`jax.value_and_grad`).
 
 ### 2.3 Loss Function and Optimizer
-Given target eigenvalues $\lambda^*$, the objective is the mean squared error in log-space:
+Given target eigenvalues $\lambda^{\ast}$, the objective is the mean squared error in log-space:
 
 $$
-\mathcal{L}(p) = \sum_{k=1}^{n_{\text{eig}}} \left( \ln \lambda_k(p) - \ln \lambda^*_k \right)^2
+\mathcal{L}(p) = \sum_{k=1}^{n_{\text{eig}}} \left( \ln \lambda_k(p) - \ln \lambda_k^{\ast} \right)^2
 $$
 
 The parameters $p$ are optimized using Adam with a learning rate of $\eta = 0.1$.
