@@ -23,6 +23,7 @@ For the local Apple GPU environment, see [requirements-metal.txt](requirements-m
 - [Triangle regression](training/regression/triangle_dataset_experiments.md)
 - [Triangle classification](training/classification/triangle_dataset_experiments.md)
 - [Triangle shape optimization](training/optimisation/report_optimisation_triangle.md)
+- [Triangle shape surrogate optimization](training/optimisation/report_optimisation_surrogate.md)
 
 Reports contain the results, figures, experiment settings and reproduction commands.
 
