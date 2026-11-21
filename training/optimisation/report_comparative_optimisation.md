@@ -56,7 +56,7 @@ The `DrumTransformer` architecture uses a sequence of transformer encoder layers
 - **Loss Function:** Procrustes all-orderings relative error, directly optimizing the target metric:
 
 $$
-\mathcal{L}_{\text{reg}}(\theta) = \frac{1}{B} \sum_{b=1}^B \min_{\pi \in \Pi} \text{rel\_error}\left(X^{(b)}, \pi(f_{\theta}(\lambda^{(b)}))\right)
+\mathcal{L}_{\text{reg}}(\theta) = \frac{1}{B} \sum_{b=1}^B \min_{\pi \in \Pi} \text{rel. error}\left(X^{(b)}, \pi(f_{\theta}(\lambda^{(b)}))\right)
 $$
 
 ---
