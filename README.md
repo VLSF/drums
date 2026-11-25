@@ -18,6 +18,7 @@ For the local Apple GPU environment, see [requirements-metal.txt](requirements-m
 ## Reports
 
 - [Regression and flow matching on isospectral drums](training/isospectral/isospectral_dataset_experiments.md)
+- [Geometric invariant regularization on isospectral drums](training/isospectral/regularisation/report_regularisation_experiments.md)
 - [Conditional diffusion](training/isospectral/diffusion_dataset_experiments.md)
 - [Diffusion with CFG](training/isospectral/cfg_diffusion_experiments.md)
 - [Triangle regression](training/regression/triangle_dataset_experiments.md)
