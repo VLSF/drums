@@ -155,17 +155,17 @@ From `training/isospectral/`:
 
 ```bash
 # Run pure GWW-I Model (no regularization)
-python triangle_inductive_bias/task_4_experiments.py --run gww1_noreg
+python regularisation/task_4_experiments.py --run gww1_noreg
 
 # Run GWW-I with Area Consistency (Strategy 1, SOTA 90.9% sharp)
-python triangle_inductive_bias/task_4_experiments.py --run gww1_area --gamma 1.0
+python regularisation/task_4_experiments.py --run gww1_area --gamma 1.0
 
 # Run GWW-I with Perimeter Consistency (Strategy 2)
-python triangle_inductive_bias/task_4_experiments.py --run gww1_perim --gamma 1.0
+python regularisation/task_4_experiments.py --run gww1_perim --gamma 1.0
 
 # Run GWW-I with Variance Regularization (gamma=0.1)
-python triangle_inductive_bias/task_4_experiments.py --run gww1_var --gamma 0.1
+python regularisation/task_4_experiments.py --run gww1_var --gamma 0.1
 
 # Run pure GWW-II Model
-python triangle_inductive_bias/task_4_experiments.py --run gww2_noreg
+python regularisation/task_4_experiments.py --run gww2_noreg
 ```
