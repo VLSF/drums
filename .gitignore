@@ -9,3 +9,4 @@ task_*.md
 /*.ipynb
 results/
 .DS_Store
+training/isospectral/cfg_protocol.json
