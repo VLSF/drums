@@ -91,3 +91,22 @@ We benchmarked both algorithms over 5 independent targets sampled from the invar
    Because reverse-mode AD (`value_and_grad`) in JAX is compiled into the same XLA computation graph, computing both the energy and the gradient takes only $\approx 12.3\text{ ms}$ per step (vs $\approx 8.0\text{ ms}$ for energy only). Because MALA accepts far more proposals, **its time per accepted state is lower than Plain MCMC** ($\approx 15.2\text{ ms}$ vs $\approx 16.4\text{ ms}$).
 4. **Necessity of Drift Truncation (t-MALA):**
    When initialized far from the mode, gradients can exceed $10^3$. Without drift truncation, the proposal jumps too far, causing reverse proposal probabilities to vanish and freezing the chain. Truncating the maximum drift step ($\|\text{drift}\| \le 0.05$) stabilizes the sampler across all drum scales while strictly preserving detailed balance.
+
+---
+
+## 4. Reproduction Commands
+
+To run the Plain MCMC sampler:
+```bash
+python training/triangles_incomplete/MCMC_search_for_spectrum.py
+```
+
+To run the MALA sampler:
+```bash
+python training/triangles_incomplete/MALA_search_for_spectrum.py
+```
+
+To run the comparative benchmark:
+```bash
+python training/triangles_incomplete/comparative_mcmc_mala.py
+```

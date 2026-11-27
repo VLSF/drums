@@ -27,6 +27,7 @@ For the local Apple GPU environment, see [requirements-metal.txt](requirements-m
 - [Triangle shape optimization](training/optimisation/report_optimisation_triangle.md)
 - [Triangle shape surrogate optimization](training/optimisation/report_optimisation_surrogate.md)
 - [Comparison of shape optimization approaches](training/optimisation/report_comparative_optimisation.md)
+- [MCMC and MALA for incomplete spectra on triangular domains](training/triangles_incomplete/report_mcmc_vs_mala.md)
 
 Reports contain the results, figures, experiment settings and reproduction commands.
 
@@ -39,6 +40,7 @@ Reports contain the results, figures, experiment settings and reproduction comma
 | `training/isospectral/` | Conway training, inference and evaluation |
 | `training/regression/`, `training/classification/` | Other training experiments |
 | `training/optimisation/` | Direct optimization through the spectrum solver |
+| `training/triangles_incomplete/` | MCMC and MALA sampling from incomplete Dirichlet spectra |
 | `notebooks/` | Exploratory analysis |
 
 [src/drums/models/diffusion.py](src/drums/models/diffusion.py) implements diffusion;
